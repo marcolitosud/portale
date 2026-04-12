@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>Programmazione — Cartellino Tecnico — Effe Printing</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0E1117;--ink2:#3D4250;--ink3:#8A8F9E;
+  --paper:#F7F6F2;--paper2:#EFEEE8;--paper3:#E0DED6;
+  --g:#064E3B;--g2:#065F46;--g3:#10B981;--gs:#D1FAE5;
+  --red:#B91C1C;--reds:#FEE2E2;--blue:#1D4ED8;--blues:#DBEAFE;
+  --orange:#92400E;--oranges:#FEF3C7;
+  --r:10px;--r2:14px;--mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;
+  --sh:0 1px 4px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.05);
+}
+html,body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-height:100vh;-webkit-tap-highlight-color:transparent}
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--g);padding:20px}
+.lbox{background:white;border-radius:20px;padding:32px 24px;width:100%;max-width:360px;box-shadow:0 24px 60px rgba(0,0,0,.3)}
+.lbrand{display:flex;align-items:center;gap:10px;margin-bottom:28px}
+.licon{width:40px;height:40px;background:var(--g);border-radius:10px;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:13px}
+.lname{font-size:15px;font-weight:600}.lsub{font-size:11px;color:var(--ink3)}
+.ltitle{font-size:22px;font-weight:600;margin-bottom:4px}.lsubt{font-size:13px;color:var(--ink3);margin-bottom:24px}
+.fld{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.fld label{font-size:11px;font-weight:500;color:var(--ink2);text-transform:uppercase;letter-spacing:.05em}
+.fld input{padding:12px 14px;border:1.5px solid var(--paper3);border-radius:var(--r);font-size:15px;font-family:var(--sans);background:white;color:var(--ink);outline:none;transition:.15s;width:100%}
+.fld input:focus{border-color:var(--g3);box-shadow:0 0 0 3px rgba(16,185,129,.12)}
+.lerr{background:var(--reds);color:var(--red);font-size:13px;padding:10px 14px;border-radius:var(--r);margin-bottom:12px;display:none}
+.btnlogin{width:100%;padding:14px;background:var(--g);color:white;border:none;border-radius:var(--r);font-size:15px;font-weight:600;font-family:var(--sans);cursor:pointer}
+#app{display:none;flex-direction:column;min-height:100vh}
+#app.on{display:flex}
+.topbar{background:var(--g);padding:0 16px;display:flex;align-items:center;justify-content:space-between;height:52px;position:sticky;top:0;z-index:100;flex-shrink:0}
+.tbl{display:flex;align-items:center;gap:8px}
+.tbicon{width:30px;height:30px;background:rgba(255,255,255,.15);border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-size:11px;font-weight:700}
+.tbtitle{color:white;font-size:14px;font-weight:600}
+.tblogout{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.8);font-size:12px;font-family:var(--sans);padding:6px 12px;border-radius:7px;cursor:pointer}
+.botnav{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid var(--paper3);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+.bn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:10px 4px;cursor:pointer;border:none;background:none;font-family:var(--sans);color:var(--ink3);font-size:10px;font-weight:500}
+.bn.on{color:var(--g)}
+.bn svg{width:22px;height:22px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.bnctr{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;margin-top:-18px;cursor:pointer;border:none;background:none;font-family:var(--sans);color:var(--g);font-size:10px;font-weight:600}
+.bnctr-c{width:54px;height:54px;background:var(--g);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(6,78,59,.4);border:3px solid white}
+.bnctr-c svg{width:26px;height:26px;stroke:white;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.page{display:none;flex:1;overflow-y:auto;padding-bottom:90px}
+.page.on{display:block}
+.pi{padding:16px}
+.pt{font-size:20px;font-weight:600;margin-bottom:2px}
+.ps{font-size:13px;color:var(--ink3);margin-bottom:18px}
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+.sc{background:white;border:1px solid var(--paper3);border-radius:var(--r2);padding:14px 16px;box-shadow:var(--sh)}
+.sc.acc{border-left:3px solid var(--g3)}
+.scv{font-size:26px;font-weight:600;font-family:var(--mono);line-height:1}
+.scl{font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-top:4px}
+.card{background:white;border:1px solid var(--paper3);border-radius:var(--r2);box-shadow:var(--sh);overflow:hidden;margin-bottom:14px}
+.ch{padding:12px 16px;border-bottom:1px solid var(--paper2);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ch h3{font-size:13px;font-weight:600}
+.cb{padding:14px 16px}
+.fc{display:flex;flex-direction:column;gap:12px}
+.f{display:flex;flex-direction:column;gap:5px}
+.f label{font-size:11px;font-weight:500;color:var(--ink2);text-transform:uppercase;letter-spacing:.05em}
+.f input,.f select,.f textarea{padding:12px 14px;border:1.5px solid var(--paper3);border-radius:var(--r);font-size:15px;font-family:var(--sans);background:white;color:var(--ink);outline:none;transition:.15s;width:100%;-webkit-appearance:none}
+.f input:focus,.f select:focus,.f textarea:focus{border-color:var(--g3);box-shadow:0 0 0 3px rgba(16,185,129,.1)}
+.f select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238A8F9E' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
+.fcomp{padding:12px 14px;border:1.5px solid var(--gs);border-radius:var(--r);font-size:15px;font-family:var(--mono);background:var(--gs);color:var(--g);font-weight:600;min-height:48px;display:flex;align-items:center}
+.finfo{padding:10px 14px;border:1.5px solid var(--oranges);border-radius:var(--r);font-size:13px;font-family:var(--mono);background:var(--oranges);color:var(--orange);min-height:44px;display:flex;align-items:center}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.sl::after{content:'';flex:1;height:1px;background:var(--paper3)}
+.piega-sel{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0}
+.pbtn{padding:24px 12px;border:2px solid var(--paper3);border-radius:var(--r2);background:white;cursor:pointer;text-align:center;transition:.15s;font-family:var(--sans)}
+.pbtn:hover{border-color:var(--g3);background:var(--gs)}
+.pbtn.on{border-color:var(--g);background:var(--g);color:white}
+.pbtn .pbl{font-size:32px;font-weight:700;font-family:var(--mono);display:block}
+.st{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.st th{background:var(--g);color:white;padding:8px 6px;text-align:center;font-size:10px;text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+.st td{padding:6px;border-bottom:1px solid var(--paper2);text-align:center}
+.st tbody tr:last-child td{border-bottom:none}
+.st tbody tr:nth-child(even) td{background:var(--paper)}
+.st input{width:100%;padding:5px 6px;border:1.5px solid var(--paper3);border-radius:6px;font-size:13px;font-family:var(--mono);background:white;outline:none;text-align:center;min-height:34px}
+.st input:focus{border-color:var(--g3)}
+.stc{font-family:var(--mono);color:var(--g);font-weight:600}
+.ris{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.ri{background:var(--paper2);border-radius:var(--r);padding:12px 14px}
+.ri.hi{background:var(--gs);border:1px solid var(--g3)}
+.ri.warn{background:var(--reds);border:1px solid #fca5a5}
+.ril{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3);margin-bottom:4px}
+.ri.hi .ril{color:var(--g2)}.ri.warn .ril{color:var(--red)}
+.riv{font-size:18px;font-weight:600;font-family:var(--mono);color:var(--ink)}
+.ri.hi .riv{color:var(--g)}.ri.warn .riv{color:var(--red)}
+.hrow{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.hrow input{flex:1;padding:10px 12px;border:1.5px solid var(--paper3);border-radius:var(--r);font-size:14px;font-family:var(--mono);background:white;outline:none}
+.hrow input:focus{border-color:var(--g3)}
+.hdel{background:none;border:none;color:var(--ink3);font-size:20px;cursor:pointer;padding:4px;line-height:1}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 18px;border-radius:var(--r);font-size:14px;font-weight:500;font-family:var(--sans);cursor:pointer;border:none;transition:.12s;white-space:nowrap;min-height:44px}
+.bp{background:var(--g);color:white;width:100%}
+.bp:active{background:var(--g2)}
+.bg{background:white;border:1.5px solid var(--paper3);color:var(--ink2)}
+.bd{background:none;border:1.5px solid #fca5a5;color:var(--red)}
+.bsm{padding:6px 12px;font-size:12px;min-height:34px}
+.badd{width:100%;padding:10px;background:none;border:2px dashed var(--paper3);border-radius:var(--r);font-size:13px;color:var(--g3);cursor:pointer;font-family:var(--sans);font-weight:500;margin-top:8px}
+.ai{background:white;border:1px solid var(--paper3);border-radius:var(--r2);padding:14px;margin-bottom:10px;box-shadow:var(--sh)}
+.aih{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;gap:8px;flex-wrap:wrap}
+.ain{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--g)}
+.aid{font-size:11px;color:var(--ink3)}
+.ait{font-size:15px;font-weight:600;color:var(--ink);margin-bottom:2px}
+.ais{font-size:12px;color:var(--ink3)}
+.aia{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.badge{display:inline-block;font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;font-family:var(--mono)}
+.bg2{background:var(--gs);color:var(--g)}
+.bo{background:var(--oranges);color:var(--orange)}
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-end;justify-content:center}
+.ov.on{display:flex}
+.modal{background:white;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:92vh;display:flex;flex-direction:column}
+.mh{padding:16px 20px;border-bottom:1px solid var(--paper2);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.mh h2{font-size:16px;font-weight:600}
+.mx{background:none;border:none;font-size:24px;color:var(--ink3);cursor:pointer;line-height:1}
+.mb{padding:16px 20px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:12px}
+.mf{padding:14px 20px;border-top:1px solid var(--paper2);display:flex;flex-direction:column;gap:8px;flex-shrink:0}
+.dh{display:flex;justify-content:center;padding:8px 0 0}
+.dhb{width:36px;height:4px;background:var(--paper3);border-radius:2px}
+/* LOADER */
+.loader{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;display:none;align-items:center;justify-content:center}
+.loader.on{display:flex}
+.loader-box{background:white;border-radius:16px;padding:24px 32px;text-align:center;font-size:14px;color:var(--ink2)}
+.spinner{width:32px;height:32px;border:3px solid var(--paper3);border-top-color:var(--g);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--ink);color:white;padding:10px 20px;border-radius:30px;font-size:13px;font-weight:500;z-index:9999;opacity:0;transition:.25s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.2)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.err{background:var(--red)}
+@media print{
+  @page{size:A4 portrait;margin:8mm 10mm}
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  body>*{display:none!important}
+  #pz{display:block!important}
+}
+#pz{display:none}
+</style>
+</head>
+<body>
+
+
+
+<div id="app" class="on">
+  <div class="topbar">
+    <div class="tbl"><div class="tbicon">CT</div><span class="tbtitle" id="tbTitle">Dashboard</span></div>
+    <button class="tblogout" onclick="window.location.href='portale.html'">&#8592; Portale</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="page on" id="pg-dash">
+    <div class="pi">
+      <div class="pt">Dashboard</div><div class="ps">Cartellini tecnici Effe Printing</div>
+      <div class="sg" id="dashStats">
+        <div class="sc acc"><div class="scv">—</div><div class="scl">Cartellini totali</div></div>
+        <div class="sc"><div class="scv">—</div><div class="scl">Questo mese</div></div>
+        <div class="sc"><div class="scv">—</div><div class="scl">Clienti</div></div>
+        <div class="sc"><div class="scv">—</div><div class="scl">Commesse tipo</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <button class="btn bp" onclick="goPage('scegli')">+ Nuovo CT</button>
+        <button class="btn bg" style="border-color:var(--g3);color:var(--g)" onclick="goPage('anacom')">📋 Anagrafica</button>
+      </div>
+      <div class="card"><div class="ch"><h3>Ultimi cartellini</h3></div><div id="dashList" style="padding:4px 0"><div style="text-align:center;padding:28px;color:var(--ink3);font-size:13px">Caricamento…</div></div></div>
+    </div>
+  </div>
+
+  <!-- SCELTA PIEGA -->
+  <div class="page" id="pg-scegli">
+    <div class="pi">
+      <div class="pt">Nuovo cartellino</div>
+      <div class="ps">Scegli il tipo di piega</div>
+      <div class="piega-sel">
+        <button class="pbtn" onclick="scegliPiega('V7')"><span class="pbl">V7</span></button>
+        <button class="pbtn" onclick="scegliPiega('P5')"><span class="pbl">P5</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FORM NUOVO CT -->
+  <div class="page" id="pg-nuovo">
+    <div class="pi">
+      <div class="pt" id="nuovoTitle">Nuovo cartellino</div>
+      <div class="ps" id="nuovoSub">Compila i dati</div>
+
+      <div class="card"><div class="cb">
+        <div class="sl">Dati generali</div>
+        <div class="fc">
+          <div class="f2">
+            <div class="f"><label>Macchina</label><select id="fMacchina"><option>KBA</option></select></div>
+            <div class="f"><label>Anno</label><input id="fAnno" type="number" value="2026"/></div>
+          </div>
+          <div class="f"><label>Cliente *</label><input id="fCliente" placeholder="Es. Mondadori"/></div>
+          <div class="f2">
+            <div class="f"><label>Commessa *</label><input id="fCommessa" placeholder="Es. CHI"/></div>
+            <div class="f"><label>N° *</label><input id="fNum" type="number" placeholder="10"/></div>
+          </div>
+          <div class="f"><label>Foliazione totale</label><input id="fFolTot" type="number" placeholder="Es. 96" oninput="calcola()"/></div>
+          <div class="f2">
+            <div class="f"><label>Tipo piega</label>
+              <select id="fPiega" onchange="onPiegaChange()">
+                <option value="V7">V7</option><option value="P5">P5</option>
+              </select>
+            </div>
+            <div class="f"><label>Allestimento</label>
+              <select id="fAlles"><option>Punto Metallico</option><option>Brossura</option></select>
+            </div>
+          </div>
+          <div class="f2">
+            <div class="f"><label>Pareggiamento</label>
+              <select id="fPareg"><option>Testa</option><option>Piede</option></select>
+            </div>
+            <div class="f"><label>Unghia</label>
+              <select id="fUnghia" onchange="onUnghiaChange()">
+                <option value="SI">SI</option><option value="NO">NO</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div></div>
+
+      <div class="card"><div class="cb">
+        <div class="sl">Formato</div>
+        <div class="fc">
+          <div class="f"><label>Luce altezza mm</label><div class="finfo" id="fLuceAlt">—</div></div>
+          <div class="f2">
+            <div class="f"><label>Base netta mm *</label><input id="fBase" type="number" placeholder="198" oninput="calcola()"/></div>
+            <div class="f"><label>Altezza netta mm *</label><input id="fAlt" type="number" placeholder="274" oninput="calcola()"/></div>
+          </div>
+          <div class="f2">
+            <div class="f"><label>Rifilo testa mm *</label><input id="fRT" type="number" placeholder="4" oninput="calcola()"/></div>
+            <div class="f"><label>Rifilo piede mm *</label><input id="fRP" type="number" placeholder="4" oninput="calcola()"/></div>
+          </div>
+          <div class="f2">
+            <div class="f" id="fR1Wrap">
+              <label>Rifilo in 1a mm</label>
+              <input id="fR1" type="number" placeholder="4" oninput="calcola()"/>
+            </div>
+            <div class="f" id="fRMmWrap" style="display:none">
+              <label>Rifilo mm (P5)</label>
+              <input id="fRMm" type="number" placeholder="20" oninput="calcola()"/>
+            </div>
+            <div class="f">
+              <label>Rifilo in 4a mm</label>
+              <div class="fcomp" id="fR4Calc">—</div>
+              <input id="fR4Man" type="number" placeholder="manuale" oninput="calcola()" style="display:none;margin-top:6px"/>
+            </div>
+          </div>
+          <div class="f2">
+            <div class="f"><label>F.to intonso base</label><div class="fcomp" id="fFmtBase">—</div></div>
+            <div class="f"><label>F.to intonso altezza</label><div class="fcomp" id="fFmtAlt">—</div></div>
+          </div>
+          <div class="f2">
+            <div class="f"><label>Larghezza banda mm</label><div class="fcomp" id="fBanda">—</div></div>
+            <div class="f"><label>Lungh. unghia mm</label><div class="fcomp" id="fLungh">—</div></div>
+          </div>
+          <div class="f"><label>Circ. cilindro mm</label><div class="finfo">1240 (fisso KBA)</div></div>
+        </div>
+      </div></div>
+
+      <div class="card"><div class="cb">
+        <div class="sl">Carta</div>
+        <div class="fc">
+          <div class="f2">
+            <div class="f"><label>Cartiera</label><input id="fCartiera" placeholder="Es. UPM" list="lCartiere"/><datalist id="lCartiere"></datalist></div>
+            <div class="f"><label>Tipologia</label><input id="fTipCarta" placeholder="Es. Ultra" list="lTipologie"/><datalist id="lTipologie"></datalist></div>
+          </div>
+          <div class="f"><label>Nome carta</label><input id="fNomeCarta" placeholder="Es. UPM Ultra H" list="lNomi" oninput="onNomeCarta()"/><datalist id="lNomi"></datalist></div>
+          <div class="f"><label>Grammatura gr/m² *</label><input id="fGr" type="number" placeholder="54" oninput="calcola()"/></div>
+          <div>
+            <label style="font-size:11px;font-weight:500;color:var(--ink2);text-transform:uppercase;letter-spacing:.05em">H carta mm</label>
+            <div id="fHList" style="margin-top:6px"></div>
+            <button class="badd" onclick="addH()">+ Aggiungi H carta</button>
+          </div>
+          <div id="fCartaSug" style="display:none;background:var(--gs);border-radius:var(--r);padding:8px 12px;font-size:12px;color:var(--g)"></div>
+          <button class="btn bg bsm" onclick="salvaCarta()" style="width:100%">💾 Salva in archivio carte</button>
+        </div>
+      </div></div>
+
+      <div class="card"><div class="cb">
+        <div class="sl">Tiratura</div>
+        <div class="fc">
+          <div class="f"><label>Tiratura richiesta *</label><input id="fTir" type="number" placeholder="85800" oninput="calcola()"/></div>
+          <div class="f2">
+            <div class="f"><label>Giri avviamento</label><input id="fGiri" type="number" oninput="calcola()"/></div>
+            <div class="f"><label>% scarto contratt.</label><input id="fScarto" type="number" step="0.1" oninput="calcola()"/></div>
+          </div>
+          <div class="ris">
+            <div class="ri hi"><div class="ril">Tiratura lorda</div><div class="riv" id="fTirLorda">—</div></div>
+            <div class="ri"><div class="ril">Scarto produzione</div><div class="riv" id="fScartoProd">—</div></div>
+            <div class="ri"><div class="ril">Scarto giri avv.</div><div class="riv" id="fScartoGiri">—</div></div>
+          </div>
+        </div>
+      </div></div>
+
+      <div class="card"><div class="cb">
+        <div class="sl">Segnature (fino a 10)</div>
+        <div style="overflow-x:auto">
+          <table class="st">
+            <thead><tr><th>Segn.</th><th>Foliaz.</th><th>Pag.da</th><th>Pag.a</th><th>Pag.da2</th><th>Pag.a2</th><th>H Bobina</th><th>Fabb.kg</th></tr></thead>
+            <tbody id="segnBody"></tbody>
+          </table>
+        </div>
+        <button class="badd" onclick="addSegn()">+ Aggiungi segnatura</button>
+        <div class="ris" style="margin-top:14px">
+          <div class="ri hi"><div class="ril">Fabbisogno totale kg</div><div class="riv" id="fFabbTot">—</div></div>
+          <div class="ri" id="fFolBox"><div class="ril">Totale foliazioni</div><div class="riv" id="fTotFol">—</div></div>
+        </div>
+      </div></div>
+
+      <div class="card"><div class="cb">
+        <div class="sl">Note</div>
+        <div class="f"><textarea id="fNote" rows="3" style="width:100%;padding:12px;border:1.5px solid var(--paper3);border-radius:var(--r);font-size:14px;font-family:var(--sans);resize:vertical;outline:none" placeholder="Annotazioni tecniche…"></textarea></div>
+      </div></div>
+
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+        <button class="btn bp" onclick="salvaCartellino()">💾 Salva cartellino</button>
+        <button class="btn bg" onclick="resetForm()">Azzera</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ARCHIVIO CT -->
+  <div class="page" id="pg-archivio">
+    <div class="pi">
+      <div class="pt">Archivio cartellini</div><div class="ps">Tutti i cartellini tecnici salvati</div>
+      <input id="archQ" placeholder="🔍 Cerca…" oninput="renderArch()"
+        style="width:100%;padding:12px 14px;border:1.5px solid var(--paper3);border-radius:var(--r);font-size:14px;font-family:var(--sans);background:white;outline:none;margin-bottom:14px"/>
+      <div id="archList"><div style="text-align:center;padding:28px;color:var(--ink3)">Caricamento…</div></div>
+    </div>
+  </div>
+
+  <!-- ANAGRAFICA COMMESSE -->
+  <div class="page" id="pg-anacom">
+    <div class="pi">
+      <div class="pt">Anagrafica Commesse</div><div class="ps">Modelli preimpostati</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <button class="btn bp" onclick="apriMAna(null,'V7')">Piega V7</button>
+        <button class="btn bg" style="border-color:var(--orange);color:var(--orange)" onclick="apriMAna(null,'P5')">Piega P5</button>
+      </div>
+      <input id="anaQ" placeholder="🔍 Cerca…" oninput="renderAna()"
+        style="width:100%;padding:12px 14px;border:1.5px solid var(--paper3);border-radius:var(--r);font-size:14px;font-family:var(--sans);background:white;outline:none;margin-bottom:14px"/>
+      <div id="anaList"><div style="text-align:center;padding:28px;color:var(--ink3)">Caricamento…</div></div>
+    </div>
+  </div>
+
+  <!-- ARCHIVIO CARTE -->
+  <div class="page" id="pg-carte">
+    <div class="pi">
+      <div class="pt">Archivio Carte</div><div class="ps">Tutte le carte utilizzate</div>
+      <input id="carteQ" placeholder="🔍 Cerca…" oninput="renderCarte()"
+        style="width:100%;padding:12px 14px;border:1.5px solid var(--paper3);border-radius:var(--r);font-size:14px;font-family:var(--sans);background:white;outline:none;margin-bottom:14px"/>
+      <div id="carteList"><div style="text-align:center;padding:28px;color:var(--ink3)">Caricamento…</div></div>
+    </div>
+  </div>
+
+  <nav class="botnav">
+    <button class="bn on" id="bn-dash" onclick="goPage('dash')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard
+    </button>
+    <button class="bn" id="bn-archivio" onclick="goPage('archivio')">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Archivio
+    </button>
+    <button class="bnctr" onclick="goPage('scegli')">
+      <div class="bnctr-c"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>Nuovo CT
+    </button>
+    <button class="bn" id="bn-anacom" onclick="goPage('anacom')">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/><line x1="20" y1="8" x2="20" y2="14"/></svg>Commesse
+    </button>
+    <button class="bn" id="bn-carte" onclick="goPage('carte')">
+      <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Carte
+    </button>
+  </nav>
+</div>
+
+<!-- MODAL ANAGRAFICA -->
+<div class="ov" id="mAna" onclick="if(event.target===this)closeM('mAna')">
+  <div class="modal">
+    <div class="dh"><div class="dhb"></div></div>
+    <div class="mh"><h2 id="mAnaTitle">Nuova commessa tipo</h2><button class="mx" onclick="closeM('mAna')">×</button></div>
+    <div class="mb" id="mAnaBody"></div>
+    <div class="mf">
+      <button class="btn bp" onclick="salvaAna()">💾 Salva commessa tipo</button>
+      <button class="btn bg" onclick="closeM('mAna')">Annulla</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ANTEPRIMA -->
+<div class="ov" id="mAnt" onclick="if(event.target===this)closeM('mAnt')">
+  <div class="modal" style="max-height:95vh">
+    <div class="dh"><div class="dhb"></div></div>
+    <div class="mh"><h2 id="antTitle">Cartellino Tecnico</h2><button class="mx" onclick="closeM('mAnt')">×</button></div>
+    <div class="mb" id="antBody" style="padding:12px"></div>
+    <div class="mf">
+      <button class="btn bp" onclick="stampa()">🖨 Stampa / PDF</button>
+      <button class="btn bg" onclick="closeM('mAnt')">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<div class="loader" id="loader"><div class="loader-box"><div class="spinner"></div>Salvataggio…</div></div>
+<div id="pz"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══ TOKEN GUARD ═══
+(function(){
+  var TOKEN='xQ7m-Lp3R-effe26';
+  var params=new URLSearchParams(window.location.search);
+  var fromUrl=params.get('t')===TOKEN;
+  var fromSession=sessionStorage.getItem('ep_token')===TOKEN;
+  if(!fromUrl&&!fromSession){window.location.replace('portale.html');return;}
+  sessionStorage.setItem('ep_token',TOKEN);
+})();
+
+// ═══════ COSTANTI ═══════
+var CIRC = 1240;
+var JKEY = '$2a$10$aIXyVWMmSt2shgrf4eEnSO4mCqFIV.sQrueDnts9rs.BPjrzQXou6';
+var BINS = {
+  ct:    '69d8c6c2856a6821891af99d',
+  ana:   '69d8c6deaaba882197e33e07',
+  carte: '69d8c6f6aaba882197e33e75'
+};
+
+// ═══════ STATO GLOBALE ═══════
+var segnature = [];
+var hList = [0];
+var editId = null;
+var editAnaId = null;
+var editAnaPiega = 'V7';
+var _printCT = null;
+var _anaHList = [0];
+
+// ═══════ JSONBIN — FUNZIONI BASE ═══════
+async function jbRead(key) {
+  var url = 'https://api.jsonbin.io/v3/b/' + BINS[key] + '/latest';
+  var resp = await fetch(url, { headers: { 'X-Master-Key': JKEY } });
+  if (!resp.ok) throw new Error('HTTP ' + resp.status);
+  var json = await resp.json();
+  var rec = json.record;
+  // Gestisce sia [] che {"data":[]}
+  if (Array.isArray(rec)) return rec;
+  if (rec && Array.isArray(rec.data)) return rec.data;
+  return [];
+}
+
+async function jbWrite(key, arr) {
+  var url = 'https://api.jsonbin.io/v3/b/' + BINS[key];
+  var resp = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'X-Master-Key': JKEY },
+    body: JSON.stringify(arr)
+  });
+  if (!resp.ok) {
+    var err = await resp.text();
+    throw new Error('HTTP ' + resp.status + ' ' + err);
+  }
+  return true;
+}
+
+// ═══════ DB — LETTURA E SCRITTURA CON FALLBACK ═══════
+async function dbGet(key) {
+  try {
+    var arr = await jbRead(key);
+    // Aggiorna localStorage come backup
+    localStorage.setItem('ep_bk_' + key, JSON.stringify(arr));
+    return arr;
+  } catch(e) {
+    console.warn('JSONBin read error [' + key + ']:', e.message);
+    // Fallback localStorage
+    try { return JSON.parse(localStorage.getItem('ep_bk_' + key) || '[]'); } catch { return []; }
+  }
+}
+
+async function dbSet(key, arr) {
+  // Salva subito su localStorage
+  try { localStorage.setItem('ep_bk_' + key, JSON.stringify(arr)); } catch {}
+  // Poi salva su JSONBin
+  try {
+    await jbWrite(key, arr);
+    return true;
+  } catch(e) {
+    console.warn('JSONBin write error [' + key + ']:', e.message);
+    toast('Salvato localmente (cloud non raggiungibile)', false);
+    return false;
+  }
+}
+
+// ═══════ AUTH ═══════
+function doLogout() { window.location.href = 'portale.html'; }
+function avvia() {
+  initForm();
+  // Carica tutto in parallelo all'avvio
+  Promise.all([dbGet('ct'), dbGet('ana'), dbGet('carte')]).then(function(res) {
+    // Aggiorna datalist carte
+    var carte = res[2];
+    var u = function(arr, id) {
+      var d = G(id); if(!d) return;
+      d.innerHTML = [...new Set(arr.filter(Boolean))].map(function(x){ return '<option value="'+H(x)+'">'; }).join('');
+    };
+    u(carte.map(function(c){return c.cartiera;}), 'lCartiere');
+    u(carte.map(function(c){return c.tipologia;}), 'lTipologie');
+    u(carte.map(function(c){return c.nome;}), 'lNomi');
+    // Aggiorna dashboard con dati già caricati
+    var arr = res[0], ana = res[1];
+    var mc = new Date().toISOString().slice(0,7);
+    var mese = arr.filter(function(x){
+      if(!x.data) return false;
+      var p=x.data.split('/');
+      return p.length===3 && p[2]+'-'+p[1].padStart(2,'0')===mc;
+    }).length;
+    G('dashStats').innerHTML =
+      '<div class="sc acc"><div class="scv">'+arr.length+'</div><div class="scl">Cartellini totali</div></div>'+
+      '<div class="sc"><div class="scv">'+mese+'</div><div class="scl">Questo mese</div></div>'+
+      '<div class="sc"><div class="scv">'+new Set(arr.map(function(x){return x.cliente;})).size+'</div><div class="scl">Clienti</div></div>'+
+      '<div class="sc"><div class="scv">'+ana.length+'</div><div class="scl">Commesse tipo</div></div>';
+    var ul = arr.slice(0,8);
+    G('dashList').innerHTML = ul.length ? ul.map(function(ct){
+      var badge = ct.tipopiega==='P5' ?
+        '<span class="badge bo">P5</span>' : '<span class="badge bg2">V7</span>';
+      return '<div style="padding:12px 16px;border-bottom:1px solid var(--paper2);display:flex;align-items:center;gap:10px;cursor:pointer" onclick="openCT('+ct.id+')">'+
+        '<div style="flex:1;min-width:0">'+
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'+
+        '<span style="font-size:12px;font-weight:700;color:var(--g);font-family:var(--mono)">'+H(ct.commessa)+' N°'+(ct.numCommessa||'')+'</span>'+
+        badge+'<span style="font-size:11px;color:var(--ink3)">'+(ct.foliazioneTot||'?')+' pag.</span></div>'+
+        '<div style="font-size:14px;font-weight:600;color:var(--ink)">'+H(ct.cliente)+'</div>'+
+        '<div style="font-size:11px;color:var(--ink3)">'+ct.data+' · '+H(ct.tipoCarta||'—')+' · '+(ct.grammatura||'—')+'gr</div>'+
+        '</div><span style="color:var(--ink3);font-size:18px">›</span></div>';
+    }).join('') : '<div style="text-align:center;padding:28px;color:var(--ink3);font-size:13px">Nessun cartellino ancora creato</div>';
+  });
+}
+avvia();
+
+// ═══════ NAVIGAZIONE ═══════
+var TITLES = { dash:'Dashboard', scegli:'Scegli piega', nuovo:'Nuovo CT', archivio:'Archivio CT', anacom:'Anagrafica Commesse', carte:'Archivio Carte' };
+function goPage(id) {
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('on'); });
+  document.querySelectorAll('.bn').forEach(function(b){ b.classList.remove('on'); });
+  G('pg-' + id).classList.add('on');
+  var bn = G('bn-' + id); if (bn) bn.classList.add('on');
+  G('tbTitle').textContent = TITLES[id] || '';
+  if (id === 'dash') renderDash();
+  if (id === 'archivio') renderArch();
+  if (id === 'anacom') renderAna();
+  if (id === 'carte') renderCarte();
+}
+function scegliPiega(piega) {
+  resetForm();
+  G('fPiega').value = piega;
+  onPiegaChange();
+  G('nuovoTitle').textContent = 'Nuovo CT — ' + piega;
+  G('nuovoSub').textContent = 'Piega ' + piega;
+  goPage('nuovo');
+}
+
+// ═══════ FORMULE ═══════
+function hBobinaV7(fol, banda) {
+  var map = {8:1,16:2,20:2.5,24:3,28:3.5,32:4,48:2,60:2.5,72:3,84:3.5,96:4};
+  var m = map[parseInt(fol)]; if (!m || !banda) return null;
+  return banda * m;
+}
+function hBobinaP5(fol, banda) {
+  var map = {8:1,16:2,24:3,32:4,48:3,64:4,40:5,80:5};
+  var m = map[parseInt(fol)]; if (!m || !banda) return null;
+  return banda * m;
+}
+function fabbBase(hb, gr, tl, giri, sc) {
+  if (!hb || !gr || !tl) return null;
+  var c = CIRC/1000, h = hb/1000, s = (sc||0)/100;
+  return ((c*h*gr*tl)/1000)*(1+s) + ((c*h*gr*(giri||0))/1000);
+}
+function divV7(fol, f) { return parseInt(fol)<48 ? f/3 : f; }
+function divP5(fol, f) { return [16,24,32,40].includes(parseInt(fol)) ? f/2 : f; }
+
+// ═══════ CALCOLA ═══════
+function calcola() {
+  var piega = G('fPiega').value;
+  var base=N('fBase'), alt=N('fAlt'), rt=N('fRT'), rp=N('fRP'), r1=N('fR1'), rMm=N('fRMm');
+  var gr=N('fGr'), tir=N('fTir'), giri=N('fGiri')||0, sc=N('fScarto')||0;
+  var unghia = G('fUnghia').value;
+  var luceAlt, fmtBase, fmtAlt, banda, r4=0, lungh=0;
+
+  if (piega === 'V7') {
+    luceAlt = CIRC/3;
+    fmtAlt = alt>0 ? alt+rt+rp : 0;
+    fmtBase = CIRC/6;
+    banda = fmtAlt>0 ? fmtAlt*2 : 0;
+    if (unghia === 'SI') {
+      r4 = base>0 ? (CIRC/3)-(base*2+r1) : 0;
+      lungh = base>0 ? (CIRC/3)-(base*2+r1+rt) : 0;
+    } else {
+      r4 = N('fR4Man')||0; lungh=0;
+    }
+  } else {
+    luceAlt = CIRC/4;
+    fmtBase = base>0 ? base+r1 : 0;
+    fmtAlt = luceAlt;
+    if (unghia === 'SI') {
+      r4 = luceAlt>0 ? luceAlt-(alt+rMm) : 0;
+      lungh = r4>0 ? r4-r1 : 0;
+    } else {
+      r4 = N('fR4Man')||0; lungh=0;
+    }
+    banda = base>0 ? base*2+r1+r4 : 0;
+  }
+
+  var percTL = piega==='V7' ? 0.011 : 0.013;
+  var tl = tir>0 ? tir*(1+percTL) : 0;
+  var sp = tl>0 ? tl*0.03 : 0;
+
+  G('fLuceAlt').textContent = n2(luceAlt)+' mm';
+  G('fFmtBase').textContent = fmtBase>0 ? n2(fmtBase) : '—';
+  G('fFmtAlt').textContent = fmtAlt>0 ? n2(fmtAlt) : '—';
+  G('fBanda').textContent = banda>0 ? n2(banda) : '—';
+  G('fR4Calc').textContent = unghia==='SI'&&r4!==0 ? n2(r4) : '—';
+  G('fLungh').textContent = unghia==='SI'&&lungh!==0 ? n2(lungh) : '—';
+  G('fTirLorda').textContent = tl>0 ? Math.round(tl).toLocaleString('it-IT') : '—';
+  G('fScartoProd').textContent = sp>0 ? Math.round(sp).toLocaleString('it-IT') : '—';
+  G('fScartoGiri').textContent = giri>0 ? Math.round(giri).toLocaleString('it-IT') : '—';
+
+  var fabbTot=0, totFol=0;
+  segnature.forEach(function(s,i) {
+    var hb = piega==='V7' ? hBobinaV7(s.fol, banda) : hBobinaP5(s.fol, banda);
+    var f22 = fabbBase(hb, gr, tl, giri, sc);
+    var ff = f22!==null ? (piega==='V7' ? divV7(s.fol,f22) : divP5(s.fol,f22)) : null;
+    var hbEl=G('hb_'+i), fkEl=G('fk_'+i);
+    if(hbEl) hbEl.textContent = hb!==null ? n2(hb) : '—';
+    if(fkEl) fkEl.textContent = ff!==null ? n2(ff) : '—';
+    if(ff!==null) fabbTot+=ff;
+    if(s.fol) totFol+=parseInt(s.fol)||0;
+  });
+  G('fFabbTot').textContent = fabbTot>0 ? n2(fabbTot) : '—';
+  G('fTotFol').textContent = totFol>0 ? totFol : '—';
+
+  var folTot = parseInt(G('fFolTot').value)||0;
+  G('fFolBox').className = folTot>0&&totFol>0&&totFol!==folTot ? 'ri warn' : 'ri';
+
+  window._calc = {luceAlt,fmtBase,fmtAlt,banda,r4,lungh,tl,sp,fabbTot,totFol,unghia,piega};
+}
+
+// ═══════ PIEGA / UNGHIA ═══════
+function onPiegaChange() {
+  var p = G('fPiega').value;
+  G('fRMmWrap').style.display = p==='P5' ? 'flex' : 'none';
+  if (!N('fGiri')) G('fGiri').value = p==='V7' ? 3000 : 4000;
+  if (!N('fScarto')) G('fScarto').value = p==='V7' ? 8.5 : 8;
+  onUnghiaChange();
+}
+function onUnghiaChange() {
+  var no = G('fUnghia').value==='NO';
+  G('fR1Wrap').style.opacity = no ? '0.4' : '1';
+  G('fR4Calc').style.display = no ? 'none' : 'flex';
+  G('fR4Man').style.display = no ? 'block' : 'none';
+  calcola();
+}
+
+// ═══════ SEGNATURE ═══════
+function initSegn(n) {
+  n = n || 1;
+  segnature = [];
+  for(var i=0;i<Math.min(n,10);i++) segnature.push({fol:0,d1:'',a1:'',d2:'',a2:''});
+  renderSegn();
+}
+function addSegn() {
+  if(segnature.length>=10){toast('Massimo 10 segnature',true);return;}
+  segnature.push({fol:0,d1:'',a1:'',d2:'',a2:''});
+  renderSegn(); calcola();
+}
+function delSegn(i) {
+  if(segnature.length<=1){toast('Serve almeno una segnatura',true);return;}
+  segnature.splice(i,1); renderSegn(); calcola();
+}
+function renderSegn() {
+  G('segnBody').innerHTML = segnature.map(function(s,i){
+    return '<tr>' +
+      '<td style="font-weight:600;font-family:var(--mono);white-space:nowrap;font-size:11px">' + (i+1) + 'ª' +
+      (segnature.length>1 ? '<button onclick="delSegn('+i+')" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:14px;margin-left:3px">×</button>' : '') +
+      '</td>' +
+      '<td><input type="number" value="'+(s.fol||'')+'" placeholder="72" style="width:52px" onchange="segnature['+i+'].fol=parseInt(this.value)||0;calcola()"/></td>' +
+      '<td><input type="number" value="'+(s.d1||'')+'" placeholder="—" style="width:48px" onchange="segnature['+i+'].d1=this.value"/></td>' +
+      '<td><input type="number" value="'+(s.a1||'')+'" placeholder="—" style="width:48px" onchange="segnature['+i+'].a1=this.value"/></td>' +
+      '<td><input type="number" value="'+(s.d2||'')+'" placeholder="—" style="width:48px" onchange="segnature['+i+'].d2=this.value"/></td>' +
+      '<td><input type="number" value="'+(s.a2||'')+'" placeholder="—" style="width:48px" onchange="segnature['+i+'].a2=this.value"/></td>' +
+      '<td class="stc" id="hb_'+i+'">—</td>' +
+      '<td class="stc" id="fk_'+i+'">—</td>' +
+      '</tr>';
+  }).join('');
+}
+
+// ═══════ H CARTA ═══════
+function addH() { hList.push(0); renderH(); }
+function removeH(i) {
+  if(hList.length<=1){toast('Serve almeno una H carta',true);return;}
+  hList.splice(i,1); renderH(); calcola();
+}
+function renderH() {
+  G('fHList').innerHTML = hList.map(function(v,i){
+    return '<div class="hrow">' +
+      '<input type="number" placeholder="Es. 1.692" step="0.001" value="'+(v||'')+'" ' +
+      'oninput="hList['+i+']=parseFloat(this.value)||0;calcola()" ' +
+      'style="flex:1;padding:10px 12px;border:1.5px solid var(--paper3);border-radius:var(--r);font-size:14px;font-family:var(--mono);background:white;outline:none"/>' +
+      (hList.length>1 ? '<button class="hdel" onclick="removeH('+i+')">×</button>' : '') +
+      '</div>';
+  }).join('');
+}
+
+// ═══════ INIT FORM ═══════
+function initForm() {
+  G('fAnno').value = new Date().getFullYear();
+  G('fGiri').value = 3000;
+  G('fScarto').value = 8.5;
+  hList = [0]; renderH();
+  initSegn(1);
+  onPiegaChange();
+}
+function resetForm() {
+  editId = null;
+  G('nuovoTitle').textContent = 'Nuovo cartellino';
+  G('nuovoSub').textContent = 'Compila i dati';
+  ['fCliente','fCommessa','fNum','fFolTot','fBase','fAlt','fRT','fRP','fR1','fRMm','fR4Man',
+   'fCartiera','fTipCarta','fNomeCarta','fGr','fTir','fNote'].forEach(function(id){
+    if(G(id)) G(id).value='';
+  });
+  G('fAnno').value = new Date().getFullYear();
+  G('fMacchina').value = 'KBA';
+  G('fAlles').value = 'Punto Metallico';
+  G('fPareg').value = 'Testa';
+  G('fUnghia').value = 'SI';
+  G('fPiega').value = 'V7';
+  G('fCartaSug').style.display = 'none';
+  hList = [0]; renderH();
+  initSegn(1);
+  onPiegaChange();
+}
+
+// ═══════ SALVA CARTELLINO ═══════
+async function salvaCartellino() {
+  var cli=V('fCliente'), com=V('fCommessa'), num=V('fNum');
+  var piega = G('fPiega').value;
+  var miss = [];
+  if(!cli) miss.push('Cliente');
+  if(!com) miss.push('Commessa');
+  if(!num) miss.push('Numero commessa');
+  if(!V('fBase')) miss.push('Base netta');
+  if(!V('fAlt')) miss.push('Altezza netta');
+  if(!V('fRT')) miss.push('Rifilo testa');
+  if(!V('fRP')) miss.push('Rifilo piede');
+  if(!V('fTir')) miss.push('Tiratura richiesta');
+  if(!V('fGr')) miss.push('Grammatura');
+  if(!segnature.length||!segnature[0].fol) miss.push('Almeno una segnatura con foliazioni');
+  if(miss.length){alert('Campi mancanti:\n• '+miss.join('\n• '));return;}
+
+  showLoader(true);
+  var tutti = await dbGet('ct');
+  showLoader(false);
+
+  // Check duplicato (case insensitive)
+  if(!editId){
+    var dup = tutti.find(function(x){ return x.commessa.toLowerCase()===com.toLowerCase()&&String(x.numCommessa)===num; });
+    if(dup){
+      if(!confirm('ATTENZIONE: '+com+' N°'+num+' già presente.\nSovrascrivere?')) return;
+      tutti = tutti.filter(function(x){ return !(x.commessa.toLowerCase()===com.toLowerCase()&&String(x.numCommessa)===num); });
+    }
+  }
+
+  // Check foliazioni
+  var folTot=parseInt(G('fFolTot').value)||0;
+  var folSomma=segnature.reduce(function(a,s){return a+(parseInt(s.fol)||0);},0);
+  if(folTot>0&&folSomma!==folTot){
+    if(!confirm('ATTENZIONE: foliazioni segnature ('+folSomma+') ≠ foliazione totale ('+folTot+'). Diff: '+(folSomma-folTot)+' pag.\nContinuare?')) return;
+  }
+
+  calcola();
+  var c = window._calc || {};
+  var ct = {
+    id: editId||Date.now(), ts:Date.now(),
+    data: new Date().toLocaleDateString('it-IT'),
+    macchina:'KBA', anno:V('fAnno'),
+    cliente:cli, commessa:com, numCommessa:num,
+    foliazioneTot:parseInt(G('fFolTot').value)||0,
+    tipopiega:piega, allestimento:G('fAlles').value,
+    pareggiamento:G('fPareg').value, unghia:G('fUnghia').value,
+    baseNetta:N('fBase'), altezzaNetta:N('fAlt'),
+    rifiloTesta:N('fRT'), rifiloPiede:N('fRP'),
+    rifilo1a:N('fR1'), rifiloMm:N('fRMm'),
+    rifilo4a:c.r4||0, fmtBase:c.fmtBase||0, fmtAlt:c.fmtAlt||0,
+    banda:c.banda||0, lunghUnghia:c.lungh||0, luceAlt:c.luceAlt||0,
+    cartCartiera:V('fCartiera'), cartTipologia:V('fTipCarta'),
+    tipoCarta:V('fNomeCarta'), grammatura:N('fGr'),
+    hCartaList:hList.slice(),
+    tiraturaRich:N('fTir'), giriAvv:N('fGiri'),
+    scartoPerc:N('fScarto'),
+    tiraturaLorda:c.tl||0, scartoProd:c.sp||0,
+    note:V('fNote'),
+    segnature:segnature.map(function(s){return Object.assign({},s);}),
+    fabbTotale:c.fabbTot||0, totFol:c.totFol||0
+  };
+  if(editId){var idx=tutti.findIndex(function(x){return x.id===editId;});if(idx>=0)tutti[idx]=ct;else tutti.unshift(ct);}
+  else tutti.unshift(ct);
+
+  showLoader(true);
+  await dbSet('ct', tutti);
+  showLoader(false);
+  editId=null; toast('Cartellino salvato ✓');
+  mostraAnt(ct);
+}
+
+// ═══════ ANTEPRIMA E STAMPA ═══════
+function mostraAnt(ct) {
+  _printCT = ct;
+  G('antTitle').textContent = ct.commessa+' N°'+(ct.numCommessa||'')+' — '+(ct.foliazioneTot||'?')+' pag.';
+  G('antBody').innerHTML = buildCT(ct);
+  openM('mAnt');
+}
+function stampa() {
+  if(!_printCT) return;
+  var css = [
+    '*{box-sizing:border-box;margin:0;padding:0}',
+    'body{font-family:Arial,sans-serif;font-size:10px;padding:8mm 10mm}',
+    '@media print{@page{size:A4;margin:8mm 10mm}body{padding:0}}',
+    '.t{text-align:center;font-size:14px;font-weight:700;border:2px solid #000;padding:6px;margin-bottom:8px;background:#f0f0f0}',
+    '.sec{border:1px solid #000;margin-bottom:6px}',
+    '.st{background:#064E3B;color:white;padding:4px 8px;font-size:9px;font-weight:700;text-transform:uppercase}',
+    '.g2{display:grid;grid-template-columns:1fr 1fr}',
+    '.row{display:grid;grid-template-columns:150px 1fr;border-bottom:1px solid #ddd}',
+    '.row:last-child{border-bottom:none}',
+    '.rl{padding:4px 6px;background:#f5f5f5;font-weight:700;font-size:9px;text-transform:uppercase;border-right:1px solid #ddd;color:#444}',
+    '.rv{padding:4px 8px;font-size:11px}',
+    '.rv.m{font-family:monospace;font-weight:600}',
+    '.rv.b{font-size:13px;font-weight:700}',
+    '.tbl{width:100%;border-collapse:collapse;font-size:9.5px}',
+    '.tbl th{background:#eee;padding:4px 6px;border:1px solid #ccc;text-align:center;font-size:8px;font-weight:700;text-transform:uppercase}',
+    '.tbl td{padding:5px 6px;border:1px solid #ccc;text-align:center}',
+    '.tbl td.m{font-family:monospace;font-weight:600}',
+    '.tbl tr:nth-child(even) td{background:#fafafa}',
+    '.note{border:1px solid #000;padding:6px 8px;min-height:28px}',
+    '.notel{font-size:8px;font-weight:700;text-transform:uppercase;color:#555;margin-bottom:3px}',
+    '.firme{display:grid;grid-template-columns:1fr 1fr 1fr;border:1px solid #000;margin-top:6px}',
+    '.firma{padding:8px;border-right:1px solid #ccc;min-height:35px}',
+    '.firma:last-child{border-right:none}',
+    '.firmal{font-size:8px;color:#555;text-transform:uppercase}'
+  ].join('');
+  var w = window.open('','_blank','width=900,height=700');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Programmazione — CT '+H(_printCT.commessa)+'</title><style>'+css+'</style></head><body>'+buildCT(_printCT)+'</body></html>');
+  w.document.close(); w.focus(); setTimeout(function(){w.print();},500);
+}
+function buildCT(ct) {
+  var piega = ct.tipopiega||'V7';
+  var segni = (ct.segnature||[]).map(function(s,i){
+    var hb = piega==='V7' ? hBobinaV7(s.fol||s.foliazioni, ct.banda||0) : hBobinaP5(s.fol||s.foliazioni, ct.banda||0);
+    var f22 = fabbBase(hb, ct.grammatura, ct.tiraturaLorda, ct.giriAvv, ct.scartoPerc);
+    var ff = f22!==null ? (piega==='V7' ? divV7(s.fol||s.foliazioni,f22) : divP5(s.fol||s.foliazioni,f22)) : null;
+    return '<tr><td>'+(i+1)+'ª</td><td class="m">'+(s.fol||s.foliazioni||'—')+'</td>'+
+      '<td>'+(s.d1||s.pagDa||'—')+'</td><td>'+(s.a1||s.pagA||'—')+'</td>'+
+      '<td>'+(s.d2||s.pagDa2||'—')+'</td><td>'+(s.a2||s.pagA2||'—')+'</td>'+
+      '<td class="m">'+(hb!==null?n2(hb):'—')+'</td>'+
+      '<td class="m">'+(ff!==null?n2(ff):'—')+'</td></tr>';
+  }).join('');
+  var hcStr = (ct.hCartaList||[ct.hCarta||0]).filter(Boolean).map(function(h){return n2(h)+' mm';}).join(', ')||'—';
+  return '<div class="t">CARTELLINO TECNICO — '+H(ct.commessa)+' N°'+(ct.numCommessa||'')+' — '+(ct.foliazioneTot||'?')+' pag. ['+piega+'] — '+ct.data+'</div>'+
+    '<div class="sec"><div class="st">Dati generali</div><div class="g2"><div>'+
+    '<div class="row"><div class="rl">Macchina</div><div class="rv m b">'+H(ct.macchina)+' '+(ct.anno||'')+'</div></div>'+
+    '<div class="row"><div class="rl">Cliente</div><div class="rv b">'+H(ct.cliente)+'</div></div>'+
+    '<div class="row"><div class="rl">Commessa</div><div class="rv m b">'+H(ct.commessa)+' N°'+(ct.numCommessa||'')+'</div></div>'+
+    '<div class="row"><div class="rl">Foliazione tot.</div><div class="rv m b">'+(ct.foliazioneTot||'—')+' pag.</div></div>'+
+    '<div class="row"><div class="rl">Tipo piega</div><div class="rv m">'+H(piega)+'</div></div>'+
+    '</div><div>'+
+    '<div class="row"><div class="rl">Allestimento</div><div class="rv">'+H(ct.allestimento||'—')+'</div></div>'+
+    '<div class="row"><div class="rl">Pareggiamento</div><div class="rv">'+H(ct.pareggiamento||'—')+'</div></div>'+
+    '<div class="row"><div class="rl">Unghia</div><div class="rv m">'+(ct.unghia||'—')+'</div></div>'+
+    '<div class="row"><div class="rl">Tipo carta</div><div class="rv">'+H(ct.tipoCarta||'—')+'</div></div>'+
+    '<div class="row"><div class="rl">Grammatura</div><div class="rv m">'+(ct.grammatura||'—')+' gr/m²</div></div>'+
+    '</div></div></div>'+
+    '<div class="sec"><div class="st">Formato ('+piega+')</div><div class="g2"><div>'+
+    '<div class="row"><div class="rl">Luce altezza mm</div><div class="rv m">'+(n2(ct.luceAlt)||'—')+'</div></div>'+
+    '<div class="row"><div class="rl">F.to finito mm</div><div class="rv m b">'+(ct.baseNetta||'—')+' × '+(ct.altezzaNetta||'—')+'</div></div>'+
+    '<div class="row"><div class="rl">F.to intonso mm</div><div class="rv m b">'+(n2(ct.fmtBase)||'—')+' × '+(n2(ct.fmtAlt)||'—')+'</div></div>'+
+    '<div class="row"><div class="rl">Circ. cilindro</div><div class="rv m">'+CIRC+' mm</div></div>'+
+    '</div><div>'+
+    '<div class="row"><div class="rl">Rifilo testa mm</div><div class="rv m">'+(ct.rifiloTesta||'—')+'</div></div>'+
+    '<div class="row"><div class="rl">Rifilo piede mm</div><div class="rv m">'+(ct.rifiloPiede||'—')+'</div></div>'+
+    '<div class="row"><div class="rl">Rifilo in 1a mm</div><div class="rv m">'+(ct.rifilo1a||'—')+'</div></div>'+
+    '<div class="row"><div class="rl">Rifilo in 4a mm</div><div class="rv m">'+(n2(ct.rifilo4a)||'—')+'</div></div>'+
+    '<div class="row"><div class="rl">Largh. banda mm</div><div class="rv m">'+(n2(ct.banda)||'—')+'</div></div>'+
+    '<div class="row"><div class="rl">Lungh. unghia mm</div><div class="rv m">'+(n2(ct.lunghUnghia)||'—')+'</div></div>'+
+    '</div></div></div>'+
+    '<div class="sec"><div class="st">Tiratura</div><div class="g2"><div>'+
+    '<div class="row"><div class="rl">Tiratura richiesta</div><div class="rv m b">'+((ct.tiraturaRich||0).toLocaleString('it-IT'))+'</div></div>'+
+    '<div class="row"><div class="rl">Tiratura lorda</div><div class="rv m b">'+(Math.round(ct.tiraturaLorda||0).toLocaleString('it-IT'))+'</div></div>'+
+    '<div class="row"><div class="rl">H carta</div><div class="rv m">'+hcStr+'</div></div>'+
+    '</div><div>'+
+    '<div class="row"><div class="rl">Giri avviamento</div><div class="rv m">'+((ct.giriAvv||0).toLocaleString('it-IT'))+'</div></div>'+
+    '<div class="row"><div class="rl">Scarto produzione</div><div class="rv m">'+(Math.round(ct.scartoProd||0).toLocaleString('it-IT'))+'</div></div>'+
+    '</div></div></div>'+
+    '<div class="sec"><div class="st">Composizione segnature</div>'+
+    '<table class="tbl"><thead><tr><th>Segn.</th><th>Foliaz.</th><th>Pag.da</th><th>Pag.a</th><th>Pag.da2</th><th>Pag.a2</th><th>H Bobina mm</th><th>Fabb. kg</th></tr></thead>'+
+    '<tbody>'+segni+'</tbody>'+
+    '<tfoot><tr><td colspan="6" style="text-align:right;font-weight:700;padding:5px 8px">TOTALI</td>'+
+    '<td class="m" style="font-weight:700">'+(ct.totFol||'—')+' pag.</td>'+
+    '<td class="m" style="font-weight:700;background:#D1FAE5">'+(n2(ct.fabbTotale)||'—')+' kg</td></tr></tfoot>'+
+    '</table></div>'+
+    '<div class="note"><div class="notel">Note</div>'+H(ct.note||'')+'</div>'+
+    '<div class="firme">'+
+    '<div class="firma"><div class="firmal">Preparato da</div></div>'+
+    '<div class="firma"><div class="firmal">Verificato da</div></div>'+
+    '<div class="firma"><div class="firmal">Approvato da</div></div>'+
+    '</div>';
+}
+
+// ═══════ DASHBOARD ═══════
+async function renderDash() {
+  var results = await Promise.all([dbGet('ct'), dbGet('ana')]);
+  var arr = results[0], ana = results[1];
+  var mc = new Date().toISOString().slice(0,7);
+  var mese = arr.filter(function(x){
+    if(!x.data) return false;
+    var p=x.data.split('/');
+    return p.length===3 && p[2]+'-'+p[1].padStart(2,'0')===mc;
+  }).length;
+  G('dashStats').innerHTML =
+    '<div class="sc acc"><div class="scv">'+arr.length+'</div><div class="scl">Cartellini totali</div></div>'+
+    '<div class="sc"><div class="scv">'+mese+'</div><div class="scl">Questo mese</div></div>'+
+    '<div class="sc"><div class="scv">'+new Set(arr.map(function(x){return x.cliente;})).size+'</div><div class="scl">Clienti</div></div>'+
+    '<div class="sc"><div class="scv">'+ana.length+'</div><div class="scl">Commesse tipo</div></div>';
+  var ul = arr.slice(0,8);
+  G('dashList').innerHTML = ul.length ? ul.map(function(ct){
+    var badge = ct.tipopiega==='P5' ?
+      '<span class="badge bo">P5</span>' : '<span class="badge bg2">V7</span>';
+    return '<div style="padding:12px 16px;border-bottom:1px solid var(--paper2);display:flex;align-items:center;gap:10px;cursor:pointer" onclick="openCT('+ct.id+')">'+
+      '<div style="flex:1;min-width:0">'+
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'+
+      '<span style="font-size:12px;font-weight:700;color:var(--g);font-family:var(--mono)">'+H(ct.commessa)+' N°'+(ct.numCommessa||'')+'</span>'+
+      badge+
+      '<span style="font-size:11px;color:var(--ink3)">'+ct.foliazioneTot+' pag.</span>'+
+      '</div>'+
+      '<div style="font-size:14px;font-weight:600;color:var(--ink)">'+H(ct.cliente)+'</div>'+
+      '<div style="font-size:11px;color:var(--ink3)">'+ct.data+' · '+H(ct.tipoCarta||'—')+' · '+(ct.grammatura||'—')+'gr</div>'+
+      '</div><span style="color:var(--ink3);font-size:18px">›</span></div>';
+  }).join('') : '<div style="text-align:center;padding:28px;color:var(--ink3);font-size:13px">Nessun cartellino ancora creato</div>';
+}
+
+// ═══════ ARCHIVIO CT ═══════
+async function renderArch() {
+  // Mostra subito i dati locali, poi aggiorna dal cloud
+  var local = [];
+  try { local = JSON.parse(localStorage.getItem('ep_bk_ct')||'[]'); } catch {}
+  if(local.length) renderArchData(local);
+  else G('archList').innerHTML = '<div style="text-align:center;padding:28px;color:var(--ink3)">Caricamento…</div>';
+  var arr = await dbGet('ct');
+  renderArchData(arr);
+}
+function renderArchData(arr) {
+  var q = (G('archQ').value||'').toLowerCase();
+  var f = q ? arr.filter(function(x){return (x.cliente||'').toLowerCase().includes(q)||(x.commessa||'').toLowerCase().includes(q);}) : arr;
+  G('archList').innerHTML = f.length ? f.map(function(ct){
+    var badge = ct.tipopiega==='P5' ? '<span class="badge bo">P5</span>' : '<span class="badge bg2">V7</span>';
+    return '<div class="ai">'+
+      '<div class="aih"><span class="ain">'+H(ct.commessa)+' N°'+(ct.numCommessa||'')+'</span>'+badge+'<span class="aid">'+ct.data+'</span></div>'+
+      '<div style="font-size:12px;font-weight:700;color:var(--g);font-family:var(--mono);margin-bottom:2px">'+(ct.foliazioneTot||'?')+' pag.</div>'+
+      '<div class="ait">'+H(ct.cliente)+'</div>'+
+      '<div class="ais">'+H(ct.tipoCarta||'—')+' · '+(ct.grammatura||'—')+'gr · '+(Math.round(ct.tiraturaRich||0).toLocaleString('it-IT'))+' cop.</div>'+
+      '<div class="aia">'+
+      '<button class="btn bg bsm" onclick="openCT('+ct.id+')">👁 Vedi</button>'+
+      '<button class="btn bg bsm" onclick="stampaCT('+ct.id+')">🖨 Stampa</button>'+
+      '<button class="btn bg bsm" onclick="modificaCT('+ct.id+')">✏️ Modifica</button>'+
+      '<button class="btn bd bsm" onclick="eliminaCT('+ct.id+')">Elimina</button>'+
+      '</div></div>';
+  }).join('') : '<div style="text-align:center;padding:28px;color:var(--ink3);font-size:13px">Nessun cartellino trovato</div>';
+}
+async function openCT(id) {
+  showLoader(true);
+  var arr = await dbGet('ct');
+  showLoader(false);
+  var ct = arr.find(function(x){return x.id==id;}); if(!ct) return;
+  mostraAnt(ct);
+}
+async function stampaCT(id) {
+  showLoader(true);
+  var arr = await dbGet('ct');
+  showLoader(false);
+  var ct = arr.find(function(x){return x.id==id;}); if(!ct) return;
+  _printCT=ct; stampa();
+}
+async function modificaCT(id) {
+  showLoader(true);
+  var arr = await dbGet('ct');
+  showLoader(false);
+  var ct = arr.find(function(x){return x.id==id;}); if(!ct) return;
+  editId=ct.id;
+  G('nuovoTitle').textContent='Modifica CT — '+ct.commessa+' N°'+ct.numCommessa;
+  G('nuovoSub').textContent='Piega '+ct.tipopiega;
+  G('fPiega').value=ct.tipopiega||'V7';
+  G('fMacchina').value=ct.macchina||'KBA'; G('fAnno').value=ct.anno||new Date().getFullYear();
+  G('fCliente').value=ct.cliente||''; G('fCommessa').value=ct.commessa||'';
+  G('fNum').value=ct.numCommessa||''; G('fFolTot').value=ct.foliazioneTot||'';
+  G('fAlles').value=ct.allestimento||'Punto Metallico';
+  G('fPareg').value=ct.pareggiamento||'Testa'; G('fUnghia').value=ct.unghia||'SI';
+  G('fBase').value=ct.baseNetta||''; G('fAlt').value=ct.altezzaNetta||'';
+  G('fRT').value=ct.rifiloTesta||''; G('fRP').value=ct.rifiloPiede||'';
+  G('fR1').value=ct.rifilo1a||''; G('fRMm').value=ct.rifiloMm||'';
+  G('fR4Man').value=ct.rifilo4a||'';
+  G('fCartiera').value=ct.cartCartiera||''; G('fTipCarta').value=ct.cartTipologia||'';
+  G('fNomeCarta').value=ct.tipoCarta||''; G('fGr').value=ct.grammatura||'';
+  G('fTir').value=ct.tiraturaRich||''; G('fGiri').value=ct.giriAvv||3000;
+  G('fScarto').value=ct.scartoPerc||8.5; G('fNote').value=ct.note||'';
+  hList=(ct.hCartaList||[ct.hCarta||0]).slice(); renderH();
+  segnature=(ct.segnature||[]).map(function(s){
+    return {fol:s.fol||s.foliazioni||0,d1:s.d1||s.pagDa||'',a1:s.a1||s.pagA||'',d2:s.d2||s.pagDa2||'',a2:s.a2||s.pagA2||''};
+  });
+  onPiegaChange(); onUnghiaChange(); renderSegn(); calcola();
+  goPage('nuovo'); closeM('mAnt');
+}
+async function eliminaCT(id) {
+  if(!confirm('Eliminare questo cartellino?')) return;
+  showLoader(true);
+  var arr = await dbGet('ct');
+  await dbSet('ct', arr.filter(function(x){return x.id!==id;}));
+  showLoader(false);
+  renderArch(); toast('Eliminato');
+}
+
+// ═══════ ANAGRAFICA COMMESSE ═══════
+var _anaHList = [0];
+var _editAnaId = null;
+
+function apriMAna(id, piega) {
+  _editAnaId = id;
+  var p = piega || 'V7';
+  _anaHList = [0];
+  if(id) {
+    var arr = JSON.parse(localStorage.getItem('ep_bk_ana')||'[]');
+    var c = arr.find(function(x){return x.id==id;});
+    if(c){ p=c.tipopiega||'V7'; _anaHList=(c.hCartaList||[0]).slice(); }
+    buildAnaModal(p, c);
+  } else {
+    buildAnaModal(p, null);
+  }
+  openM('mAna');
+}
+
+function buildAnaModal(piega, c) {
+  G('mAnaTitle').textContent = (_editAnaId?'Modifica':'Nuova')+' commessa tipo — '+piega;
+  var numOpts = '';
+  for(var i=1;i<=15;i++) numOpts+='<option value="'+i+'" '+(c&&c.numSegnature===i?'selected':'')+'>'+i+'</option>';
+  G('mAnaBody').innerHTML =
+    '<div class="f"><label>Piega</label><select id="anaPiega" onchange="buildAnaModal(this.value,null)">'+
+    '<option value="V7" '+(piega==='V7'?'selected':'')+'>V7</option>'+
+    '<option value="P5" '+(piega==='P5'?'selected':'')+'>P5</option></select></div>'+
+    '<div class="f"><label>Cliente *</label><input id="anaCli" value="'+H(c&&c.cliente||'')+'"/></div>'+
+    '<div class="f"><label>Commessa *</label><input id="anaCom" value="'+H(c&&c.commessa||'')+'"/></div>'+
+    '<div class="f2"><div class="f"><label>Allestimento</label><select id="anaAlles">'+
+    '<option '+((!c||c.allestimento==='Punto Metallico')?'selected':'')+'>Punto Metallico</option>'+
+    '<option '+(c&&c.allestimento==='Brossura'?'selected':'')+'>Brossura</option></select></div>'+
+    '<div class="f"><label>Pareggiamento</label><select id="anaPareg">'+
+    '<option '+((!c||c.pareggiamento==='Testa')?'selected':'')+'>Testa</option>'+
+    '<option '+(c&&c.pareggiamento==='Piede'?'selected':'')+'>Piede</option></select></div></div>'+
+    '<div class="f2"><div class="f"><label>Unghia</label><select id="anaUnghia">'+
+    '<option value="SI" '+((!c||c.unghia!=='NO')?'selected':'')+'>SI</option>'+
+    '<option value="NO" '+(c&&c.unghia==='NO'?'selected':'')+'>NO</option></select></div>'+
+    '<div class="f"><label>N° segnature</label><select id="anaNumSegn">'+
+    '<option value="0">—</option>'+numOpts+'</select></div></div>'+
+    '<div class="f2"><div class="f"><label>Base netta mm</label><input id="anaBase" type="number" value="'+(c&&c.baseNetta||'')+'"/></div>'+
+    '<div class="f"><label>Altezza netta mm</label><input id="anaAlt" type="number" value="'+(c&&c.altezzaNetta||'')+'"/></div></div>'+
+    '<div class="f2"><div class="f"><label>Rifilo testa mm</label><input id="anaRT" type="number" value="'+(c&&c.rifiloTesta||'')+'"/></div>'+
+    '<div class="f"><label>Rifilo piede mm</label><input id="anaRP" type="number" value="'+(c&&c.rifiloPiede||'')+'"/></div></div>'+
+    '<div class="f2"><div class="f"><label>Rifilo in 1a mm</label><input id="anaR1" type="number" value="'+(c&&c.rifilo1a||'')+'"/></div>'+
+    (piega==='P5'?'<div class="f"><label>Rifilo mm (P5)</label><input id="anaRMm" type="number" value="'+(c&&c.rifiloMm||'')+'"/></div>':'<div class="f"></div>')+
+    '</div>'+
+    '<div class="f"><label>Foliazione totale</label><input id="anaFol" type="number" value="'+(c&&c.foliazioneTot||'')+'"/></div>'+
+    '<div class="f2"><div class="f"><label>Giri avviamento</label><input id="anaGiri" type="number" value="'+(c&&c.giriAvv||(piega==='P5'?4000:3000))+'"/></div>'+
+    '<div class="f"><label>% scarto contr.</label><input id="anaScarto" type="number" step="0.1" value="'+(c&&c.scartoPerc||(piega==='P5'?8:8.5))+'"/></div></div>'+
+    '<div class="f2"><div class="f"><label>Cartiera</label><input id="anaCartiera" value="'+H(c&&c.cartCartiera||'')+'"/></div>'+
+    '<div class="f"><label>Tipologia carta</label><input id="anaTipCarta" value="'+H(c&&c.cartTipologia||'')+'"/></div></div>'+
+    '<div class="f"><label>Nome carta</label><input id="anaNomeCarta" value="'+H(c&&c.tipoCarta||'')+'"/></div>'+
+    '<div class="f"><label>Grammatura gr/m²</label><input id="anaGr" type="number" value="'+(c&&c.grammatura||'')+'"/></div>'+
+    '<div><label style="font-size:11px;font-weight:500;color:var(--ink2);text-transform:uppercase;letter-spacing:.05em">H carta mm</label>'+
+    '<div id="anaHList" style="margin-top:6px"></div>'+
+    '<button class="badd" onclick="anaAddH()">+ Aggiungi H carta</button></div>';
+  renderAnaH();
+}
+function renderAnaH(){
+  var el=G('anaHList'); if(!el) return;
+  el.innerHTML=_anaHList.map(function(v,i){
+    return '<div class="hrow"><input type="number" placeholder="Es. 1.692" step="0.001" value="'+(v||'')+'" '+
+      'oninput="_anaHList['+i+']=parseFloat(this.value)||0" '+
+      'style="flex:1;padding:10px 12px;border:1.5px solid var(--paper3);border-radius:var(--r);font-size:14px;font-family:var(--mono);background:white;outline:none"/>'+
+      (_anaHList.length>1?'<button class="hdel" onclick="_anaHList.splice('+i+',1);renderAnaH()">×</button>':'')+
+      '</div>';
+  }).join('');
+}
+function anaAddH(){ _anaHList.push(0); renderAnaH(); }
+
+async function salvaAna() {
+  var cli=G('anaCli')&&G('anaCli').value.trim();
+  var com=G('anaCom')&&G('anaCom').value.trim();
+  if(!cli||!com){toast('Inserisci cliente e commessa',true);return;}
+  var piega=G('anaPiega')&&G('anaPiega').value||'V7';
+  var obj={
+    id:_editAnaId||Date.now(), tipopiega:piega,
+    cliente:cli, commessa:com,
+    allestimento:G('anaAlles')&&G('anaAlles').value||'Punto Metallico',
+    pareggiamento:G('anaPareg')&&G('anaPareg').value||'Testa',
+    unghia:G('anaUnghia')&&G('anaUnghia').value||'SI',
+    numSegnature:parseInt(G('anaNumSegn')&&G('anaNumSegn').value)||0,
+    baseNetta:parseFloat(G('anaBase')&&G('anaBase').value)||0,
+    altezzaNetta:parseFloat(G('anaAlt')&&G('anaAlt').value)||0,
+    rifiloTesta:parseFloat(G('anaRT')&&G('anaRT').value)||0,
+    rifiloPiede:parseFloat(G('anaRP')&&G('anaRP').value)||0,
+    rifilo1a:parseFloat(G('anaR1')&&G('anaR1').value)||0,
+    rifiloMm:parseFloat(G('anaRMm')&&G('anaRMm').value)||0,
+    foliazioneTot:parseInt(G('anaFol')&&G('anaFol').value)||0,
+    giriAvv:parseFloat(G('anaGiri')&&G('anaGiri').value)||3000,
+    scartoPerc:parseFloat(G('anaScarto')&&G('anaScarto').value)||8.5,
+    cartCartiera:G('anaCartiera')&&G('anaCartiera').value.trim()||'',
+    cartTipologia:G('anaTipCarta')&&G('anaTipCarta').value.trim()||'',
+    tipoCarta:G('anaNomeCarta')&&G('anaNomeCarta').value.trim()||'',
+    grammatura:parseFloat(G('anaGr')&&G('anaGr').value)||0,
+    hCartaList:_anaHList.slice()
+  };
+  showLoader(true);
+  var arr = await dbGet('ana');
+  if(_editAnaId){var idx=arr.findIndex(function(x){return x.id===_editAnaId;});if(idx>=0)arr[idx]=obj;else arr.unshift(obj);}
+  else arr.unshift(obj);
+  await dbSet('ana', arr);
+  showLoader(false);
+  closeM('mAna'); renderAna(); toast('Commessa tipo salvata ✓');
+}
+
+async function renderAna() {
+  var local = [];
+  try { local = JSON.parse(localStorage.getItem('ep_bk_ana')||'[]'); } catch {}
+  if(local.length) renderAnaData(local);
+  else G('anaList').innerHTML='<div style="text-align:center;padding:28px;color:var(--ink3)">Caricamento…</div>';
+  var arr = await dbGet('ana');
+  renderAnaData(arr);
+}
+function renderAnaData(arr) {
+  var q=(G('anaQ').value||'').toLowerCase();
+  var f=q?arr.filter(function(x){return (x.cliente||'').toLowerCase().includes(q)||(x.commessa||'').toLowerCase().includes(q);}):arr;
+  G('anaList').innerHTML=f.length?f.map(function(c){
+    var badge=c.tipopiega==='P5'?'<span class="badge bo">P5</span>':'<span class="badge bg2">V7</span>';
+    return '<div class="ai">'+
+      '<div class="aih"><span class="ain">'+H(c.commessa)+'</span>'+
+      (c.foliazioneTot?'<span style="font-size:12px;color:var(--ink3);font-family:var(--mono)">'+c.foliazioneTot+' pag.</span>':'')+
+      badge+'</div>'+
+      '<div class="ait">'+H(c.cliente)+'</div>'+
+      '<div class="ais">'+H(c.tipoCarta||'—')+' · '+(c.grammatura||'—')+'gr · '+(c.foliazioneTot||'—')+' pag.'+(c.numSegnature?' · '+c.numSegnature+' segn.':'')+'</div>'+
+      '<div style="font-size:11px;color:var(--ink3);margin-top:2px">'+H(c.allestimento||'')+' · Unghia: '+(c.unghia||'—')+' · '+H(c.pareggiamento||'')+'</div>'+
+      '<div class="aia">'+
+      '<button class="btn bp bsm" onclick="usaAna('+c.id+')">↩ Usa per nuovo CT</button>'+
+      '<button class="btn bg bsm" onclick="apriMAna('+c.id+',\''+c.tipopiega+'\')">✏️ Modifica</button>'+
+      '<button class="btn bd bsm" onclick="eliminaAna('+c.id+')">Elimina</button>'+
+      '</div></div>';
+  }).join(''):'<div style="text-align:center;padding:28px;color:var(--ink3);font-size:13px">Nessuna commessa tipo salvata</div>';
+}
+
+async function usaAna(id) {
+  showLoader(true);
+  var arr = await dbGet('ana');
+  showLoader(false);
+  var c = arr.find(function(x){return x.id==id;}); if(!c) return;
+  editId=null;
+  G('nuovoTitle').textContent='Nuovo CT — '+c.commessa+' ['+c.tipopiega+']';
+  G('nuovoSub').textContent='Caricato da anagrafica — inserisci N° e tiratura';
+  G('fPiega').value=c.tipopiega||'V7';
+  G('fMacchina').value='KBA'; G('fAnno').value=new Date().getFullYear();
+  G('fCliente').value=c.cliente||''; G('fCommessa').value=c.commessa||'';
+  G('fNum').value=''; G('fFolTot').value=c.foliazioneTot||'';
+  G('fAlles').value=c.allestimento||'Punto Metallico';
+  G('fPareg').value=c.pareggiamento||'Testa'; G('fUnghia').value=c.unghia||'SI';
+  G('fBase').value=c.baseNetta||''; G('fAlt').value=c.altezzaNetta||'';
+  G('fRT').value=c.rifiloTesta||''; G('fRP').value=c.rifiloPiede||'';
+  G('fR1').value=c.rifilo1a||''; G('fRMm').value=c.rifiloMm||'';
+  G('fGiri').value=c.giriAvv||3000; G('fScarto').value=c.scartoPerc||8.5;
+  G('fCartiera').value=c.cartCartiera||''; G('fTipCarta').value=c.cartTipologia||'';
+  G('fNomeCarta').value=c.tipoCarta||''; G('fGr').value=c.grammatura||'';
+  G('fTir').value=''; G('fNote').value='';
+  hList=(c.hCartaList||[0]).slice(); renderH();
+  initSegn(c.numSegnature||1);
+  onPiegaChange(); onUnghiaChange(); calcola();
+  goPage('nuovo'); toast('Caricato — inserisci N° commessa e tiratura ✓');
+}
+
+async function eliminaAna(id) {
+  if(!confirm('Eliminare questa commessa tipo?')) return;
+  showLoader(true);
+  var arr = await dbGet('ana');
+  await dbSet('ana', arr.filter(function(x){return x.id!==id;}));
+  showLoader(false);
+  renderAna(); toast('Eliminata');
+}
+
+// ═══════ ARCHIVIO CARTE ═══════
+async function salvaCarta() {
+  var nome=G('fNomeCarta').value.trim(); if(!nome){toast('Inserisci il nome della carta',true);return;}
+  var gr=parseFloat(G('fGr').value)||0;
+  showLoader(true);
+  var carte=await dbGet('carte');
+  showLoader(false);
+  if(carte.find(function(c){return c.nome===nome&&c.grammatura===gr;})){toast('Carta già in archivio',true);return;}
+  carte.unshift({id:Date.now(),cartiera:G('fCartiera').value.trim(),tipologia:G('fTipCarta').value.trim(),nome,grammatura:gr,hCartaList:hList.slice()});
+  showLoader(true);
+  await dbSet('carte',carte);
+  showLoader(false);
+  aggiornaDatalist(); toast('Carta salvata ✓');
+}
+async function aggiornaDatalist() {
+  var carte=await dbGet('carte');
+  var u=function(arr,id){var d=G(id);if(d)d.innerHTML=[...new Set(arr.filter(Boolean))].map(function(x){return '<option value="'+H(x)+'">'; }).join('');};
+  u(carte.map(function(c){return c.cartiera;}),'lCartiere');
+  u(carte.map(function(c){return c.tipologia;}),'lTipologie');
+  u(carte.map(function(c){return c.nome;}),'lNomi');
+}
+async function onNomeCarta() {
+  var nome=G('fNomeCarta').value.trim();
+  var carte=await dbGet('carte');
+  var c=carte.find(function(x){return x.nome.toLowerCase()===nome.toLowerCase();});
+  if(c){
+    if(c.grammatura) G('fGr').value=c.grammatura;
+    if(c.hCartaList&&c.hCartaList.length){hList=c.hCartaList.slice();renderH();}
+    if(c.cartiera) G('fCartiera').value=c.cartiera;
+    if(c.tipologia) G('fTipCarta').value=c.tipologia;
+    G('fCartaSug').style.display='block';
+    G('fCartaSug').textContent='✓ Trovata: '+c.grammatura+'gr/m² · H='+c.hCartaList.map(function(h){return n2(h);}).join(', ')+'mm';
+    calcola();
+  } else { G('fCartaSug').style.display='none'; }
+}
+async function renderCarte() {
+  var local = [];
+  try { local = JSON.parse(localStorage.getItem('ep_bk_carte')||'[]'); } catch {}
+  if(local.length) renderCarteData(local);
+  else G('carteList').innerHTML='<div style="text-align:center;padding:28px;color:var(--ink3)">Caricamento…</div>';
+  var arr=await dbGet('carte');
+  renderCarteData(arr);
+}
+function renderCarteData(arr) {
+  var q=(G('carteQ').value||'').toLowerCase();
+  var f=q?arr.filter(function(x){return (x.cartiera||'').toLowerCase().includes(q)||(x.nome||'').toLowerCase().includes(q);}):arr;
+  G('carteList').innerHTML=f.length?f.map(function(c){
+    return '<div class="ai">'+
+      '<div class="aih"><span class="ain">'+H(c.cartiera||'—')+'</span><span class="aid">'+(c.grammatura||'—')+' gr/m²</span></div>'+
+      '<div class="ait">'+H(c.nome||'—')+'</div>'+
+      '<div class="ais">'+H(c.tipologia||'—')+' · H: '+(c.hCartaList||[]).map(function(h){return n2(h);}).join(', ')+' mm</div>'+
+      '<div class="aia">'+
+      '<button class="btn bg bsm" onclick="usaCarta('+c.id+')">↩ Usa nel CT</button>'+
+      '<button class="btn bd bsm" onclick="eliminaCarta('+c.id+')">Elimina</button>'+
+      '</div></div>';
+  }).join(''):'<div style="text-align:center;padding:28px;color:var(--ink3);font-size:13px">Nessuna carta in archivio</div>';
+}
+async function usaCarta(id) {
+  var carte=await dbGet('carte');
+  var c=carte.find(function(x){return x.id==id;}); if(!c) return;
+  G('fCartiera').value=c.cartiera||''; G('fTipCarta').value=c.tipologia||'';
+  G('fNomeCarta').value=c.nome||''; G('fGr').value=c.grammatura||'';
+  if(c.hCartaList&&c.hCartaList.length){hList=c.hCartaList.slice();renderH();}
+  calcola(); goPage('nuovo'); toast('Carta caricata ✓');
+}
+async function eliminaCarta(id) {
+  if(!confirm('Eliminare?')) return;
+  showLoader(true);
+  var arr=await dbGet('carte');
+  await dbSet('carte',arr.filter(function(x){return x.id!==id;}));
+  showLoader(false);
+  aggiornaDatalist(); renderCarte(); toast('Eliminata');
+}
+
+// ═══════ UTILITY ═══════
+function G(id){return document.getElementById(id);}
+function V(id){var el=G(id);return el?el.value.trim():'';}
+function N(id){var el=G(id);return el?parseFloat(el.value)||0:0;}
+function H(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function n2(x){return x!=null&&!isNaN(x)?Number(x).toLocaleString('it-IT',{maximumFractionDigits:2}):'—';}
+function openM(id){G(id).classList.add('on');}
+function closeM(id){G(id).classList.remove('on');}
+function showLoader(on){G('loader').classList[on?'add':'remove']('on');}
+var _tt;
+function toast(msg,err){
+  var t=G('toast');t.textContent=msg;t.className='toast on'+(err?' err':'');
+  clearTimeout(_tt);_tt=setTimeout(function(){t.className='toast';},3200);
+}
+</script>
+</body>
+</html>
