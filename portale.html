@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<meta name="theme-color" content="#0F172A"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Effe Printing"/>
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230F172A'/><text y='.9em' font-size='80' x='50%' text-anchor='middle' font-family='monospace' font-weight='700' fill='white'>EP</text></svg>"/>
+<link rel="manifest" id="pwa-manifest"/>
+<title>Portale — Effe Printing S.r.l.</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0E1117;--ink2:#3D4250;--ink3:#8A8F9E;
+  --paper:#F7F8FA;--paper2:#ECEEF2;--paper3:#DDE0E8;
+  --sans:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+  --sh:0 2px 8px rgba(0,0,0,.08),0 8px 24px rgba(0,0,0,.06);
+}
+html,body{font-family:var(--sans);min-height:100vh;background:#0F172A;color:white;-webkit-tap-highlight-color:transparent}
+
+/* SFONDO */
+.bg{position:fixed;inset:0;background:linear-gradient(135deg,#0F172A 0%,#1E293B 50%,#0F172A 100%);z-index:0}
+.bg-grid{position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:40px 40px;z-index:0}
+
+/* CONTENUTO */
+.wrap{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px 40px}
+
+/* BRAND */
+.brand{text-align:center;margin-bottom:40px}
+.brand-icon{width:64px;height:64px;background:white;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;font-family:var(--mono);color:#0F172A;margin:0 auto 14px;box-shadow:0 8px 32px rgba(0,0,0,.3)}
+.brand-name{font-size:22px;font-weight:600;margin-bottom:4px}
+.brand-sub{font-size:14px;color:rgba(255,255,255,.45);font-family:var(--mono)}
+
+/* GRIGLIA REPARTI */
+.reparti{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:480px;margin-bottom:32px}
+.rep{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:20px 16px;cursor:pointer;transition:.2s;text-align:center;position:relative;overflow:hidden}
+.rep:active{transform:scale(.97)}
+.rep.sel{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.3);transform:scale(1.02)}
+.rep-emoji{font-size:28px;margin-bottom:8px;display:block}
+.rep-name{font-size:15px;font-weight:600;margin-bottom:3px}
+.rep-desc{font-size:11px;color:rgba(255,255,255,.45);line-height:1.4}
+/* colori accent per ogni reparto */
+.rep.spedizione{--ac:rgba(59,130,246,.25);--acb:rgba(59,130,246,.5)}
+.rep.programmazione{--ac:rgba(16,185,129,.25);--acb:rgba(16,185,129,.5)}
+.rep.produzione{--ac:rgba(245,158,11,.25);--acb:rgba(245,158,11,.5)}
+.rep.turni{--ac:rgba(139,92,246,.25);--acb:rgba(139,92,246,.5)}
+.rep.manutenzione{--ac:rgba(239,68,68,.25);--acb:rgba(239,68,68,.5)}
+.rep.allestimento{--ac:rgba(236,72,153,.25);--acb:rgba(236,72,153,.5)}
+.rep.sel{background:var(--ac);border-color:var(--acb)}
+.rep-accent{position:absolute;inset:0;opacity:0;transition:.2s;border-radius:16px}
+.sess-badge{position:absolute;top:8px;right:8px;background:rgba(16,185,129,.9);color:white;font-size:9px;font-weight:600;padding:2px 7px;border-radius:10px;font-family:var(--mono);letter-spacing:.03em}
+.rep.sel .rep-accent{opacity:1}
+
+/* PASSWORD */
+.pwd-panel{width:100%;max-width:480px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:20px;display:none}
+.pwd-panel.on{display:block}
+.pwd-label{font-size:12px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.pwd-label span{color:white;font-weight:600}
+.pwd-row{display:flex;gap:8px}
+.pwd-inp{flex:1;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.15);border-radius:10px;padding:13px 15px;font-size:16px;font-family:var(--sans);color:white;outline:none;transition:.15s}
+.pwd-inp::placeholder{color:rgba(255,255,255,.3)}
+.pwd-inp:focus{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.12)}
+.pwd-btn{background:white;color:#0F172A;border:none;border-radius:10px;padding:13px 20px;font-size:15px;font-weight:600;font-family:var(--sans);cursor:pointer;white-space:nowrap;transition:.15s}
+.pwd-btn:active{opacity:.8}
+.pwd-err{background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.4);color:#FCA5A5;font-size:13px;padding:9px 13px;border-radius:8px;margin-top:10px;display:none}
+
+/* FOOTER */
+.footer{position:relative;z-index:1;text-align:center;font-size:11px;color:rgba(255,255,255,.2);padding-bottom:20px;font-family:var(--mono)}
+</style>
+</head>
+<body>
+
+<div id="install-banner" style="display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.12);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.2);border-radius:14px;padding:12px 18px;z-index:99;width:calc(100% - 40px);max-width:440px">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div style="width:36px;height:36px;background:white;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#0F172A;font-family:monospace;flex-shrink:0">EP</div>
+    <div style="flex:1">
+      <div style="font-size:13px;font-weight:600;color:white">Installa Portale EP</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:1px">Tocca <b style="color:rgba(255,255,255,.8)">Condividi</b> poi <b style="color:rgba(255,255,255,.8)">Aggiungi a Home</b></div>
+    </div>
+    <button onclick="document.getElementById('install-banner').style.display='none';localStorage.setItem('ep_nobanner','1')" style="background:none;border:none;color:rgba(255,255,255,.5);font-size:20px;cursor:pointer;line-height:1;padding:4px">×</button>
+  </div>
+</div>
+
+<div class="bg"></div>
+<div class="bg-grid"></div>
+
+<div class="wrap">
+  <div class="brand">
+    <div class="brand-icon">EP</div>
+    <div class="brand-name">Effe Printing S.r.l.</div>
+    <div class="brand-sub">Portale interno — seleziona il reparto</div>
+  </div>
+
+  <div class="reparti">
+    <div class="rep spedizione" onclick="selRep(this,'spedizione')">
+      <span class="rep-emoji">📦</span>
+      <div class="rep-name">Spedizione</div>
+      <div class="rep-desc">Gestione DDT e bolle</div>
+    </div>
+    <div class="rep programmazione" onclick="selRep(this,'programmazione')">
+      <span class="rep-emoji">📋</span>
+      <div class="rep-name">Programmazione</div>
+      <div class="rep-desc">Cartellini tecnici</div>
+    </div>
+    <div class="rep produzione" onclick="selRep(this,'produzione')">
+      <span class="rep-emoji">🖨️</span>
+      <div class="rep-name">Produzione</div>
+      <div class="rep-desc">KBA C818 — pannello</div>
+    </div>
+    <div class="rep turni" onclick="selRep(this,'turni')">
+      <span class="rep-emoji">📅</span>
+      <div class="rep-name">Turni</div>
+      <div class="rep-desc">Gestione turni reparto</div>
+    </div>
+    <div class="rep manutenzione" onclick="selRep(this,'manutenzione')">
+      <span class="rep-emoji">🔧</span>
+      <div class="rep-name">Manutenzione</div>
+      <div class="rep-desc">Interventi, segnalazioni, programmata</div>
+    </div>
+    <div class="rep allestimento" onclick="selRep(this,'allestimento')">
+      <span class="rep-emoji">🏷️</span>
+      <div class="rep-name">Allestimento</div>
+      <div class="rep-desc">Gestione etichette</div>
+    </div>
+  </div>
+
+  <div class="pwd-panel" id="pwd-panel">
+    <div class="pwd-label">Accedi a <span id="pwd-rep-name">—</span></div>
+    <div class="pwd-row" style="margin-bottom:8px">
+      <input class="pwd-inp" id="pwd-user" type="text" placeholder="Nome utente…" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('pwd-inp').focus()"/>
+    </div>
+    <div class="pwd-row">
+      <input class="pwd-inp" id="pwd-inp" type="password" placeholder="Password…" onkeydown="if(event.key==='Enter')vai()"/>
+      <button class="pwd-btn" onclick="vai()">Entra →</button>
+    </div>
+    <div class="pwd-err" id="pwd-err">Password errata. Riprova.</div>
+  </div>
+</div>
+
+<div class="footer">© Effe Printing S.r.l. — uso interno</div>
+
+<script>
+var REPARTI={
+  spedizione:     {nome:'Spedizione',      file:'ddt.html',           uh:'4dd714adaa369245fa32bbda3997ca424274ce43b168151772371543d7e70ee4',     ph:'23f1f927509dcb2f6d989a77a8ded35740ce2be79736ccc3e686b5477d856209'},
+  programmazione: {nome:'Programmazione',  file:'cartellino.html',    uh:'56b1ff9fe08eb2c879a5829582e91b1de2169cc58f9414ef67cfb7172dca0ab9', ph:'9654b29831119e068a98376b0e44b46f6fcac1ed9c8c190c6c8163fe1d8045fb'},
+  produzione:     {nome:'Produzione',      file:'produzione.html',    uh:'327781965cd59e6b12df74ec839ce1edd8f27901da8eafe40e422f34077c109a',     ph:'f26df9ac6785e720a7d7e2d9c4748f3adb76127560c50bfe494bd57e7a6ef75c'},
+  turni:          {nome:'Turni',           file:'turni.html',         uh:'5015746262d164eaa9890f5617b32d5ce676de29f416a4779b4799d7ff545913',          ph:'b4ac1dbd14cc0fd1e2f863f19b1d52732dc544d237b68ffb15615b90d7e8f287'},
+  manutenzione:   {nome:'Manutenzione',    file:'manutenzione.html',  uh:'',                              ph:''},
+  allestimento:   {nome:'Allestimento',    file:'etichette.html',     uh:'5c66fc26ce6d4dddcfe7e5289311dc214dbfd2cb47797b78e921ba77ba2906a4',   ph:'8a0b39da060e2d6de8cc5864164f2cceccea2b9866fc0856b62dd1b667b6fbf3'}
+};
+
+var seletto=null;
+
+function selRep(el,id){
+  // Se sessione valida, vai diretto
+  if(hasSessione(id)){
+    var cfg=REPARTI[id];
+    window.location.href=cfg.file+'?t=xQ7m-Lp3R-effe26';
+    return;
+  }
+  document.querySelectorAll('.rep').forEach(function(r){r.classList.remove('sel');});
+  el.classList.add('sel');
+  seletto=id;
+  var cfg=REPARTI[id];
+  var panel=document.getElementById('pwd-panel');
+  document.getElementById('pwd-rep-name').textContent=cfg.nome;
+  document.getElementById('pwd-inp').value='';
+  document.getElementById('pwd-err').style.display='none';
+  // Se non c'è password vai diretto
+  if(!cfg.ph&&!cfg.uh){panel.classList.remove('on');window.location.href=cfg.file+'?t=xQ7m-Lp3R-effe26';return;}
+  panel.classList.add('on');
+  setTimeout(function(){document.getElementById('pwd-inp').focus();},100);
+  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+async function sha256(str){
+  var buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+}
+function salvaSessione(id){
+  var sess={id:id,ts:Date.now()};
+  localStorage.setItem('ep_sess2_'+id,JSON.stringify(sess));
+}
+function hasSessione(id){
+  try{
+    var raw=localStorage.getItem('ep_sess2_'+id);
+    if(!raw)return false;
+    var sess=JSON.parse(raw);
+    var oreMax=90*24*60*60*1000; // 90 giorni
+    return (Date.now()-sess.ts)<oreMax;
+  }catch{return false;}
+}
+function rimuoviSessione(id){localStorage.removeItem('ep_sess2_'+id);}
+
+async function vai(){
+  if(!seletto)return;
+  var cfg=REPARTI[seletto];
+  var u=document.getElementById('pwd-user').value.trim();
+  var p=document.getElementById('pwd-inp').value;
+  if(!cfg.ph&&!cfg.uh){window.location.href=cfg.file+'?t=xQ7m-Lp3R-effe26';return;}
+  var uh=await sha256(u);
+  var ph=await sha256(p);
+  if(uh===cfg.uh&&ph===cfg.ph){
+    salvaSessione(seletto);
+    window.location.href=cfg.file+'?t=xQ7m-Lp3R-effe26';
+  }else{
+    var err=document.getElementById('pwd-err');
+    err.textContent='Nome utente o password errati.';
+    err.style.display='block';
+    document.getElementById('pwd-inp').value='';
+    document.getElementById('pwd-user').value='';
+    document.getElementById('pwd-user').focus();
+    setTimeout(function(){err.style.display='none';},3000);
+  }
+}
+
+// ═══ PWA ═══
+(function(){
+  var manifest={
+    name:'Effe Printing — Portale',
+    short_name:'EP Portale',
+    description:'Portale interno Effe Printing S.r.l.',
+    start_url:'portale.html',
+    display:'standalone',
+    background_color:'#0F172A',
+    theme_color:'#0F172A',
+    orientation:'portrait',
+    icons:[
+      {src:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230F172A'/><text y='.9em' font-size='80' x='50%' text-anchor='middle' font-family='monospace' font-weight='700' fill='white'>EP</text></svg>",
+       sizes:'192x192',type:'image/svg+xml'},
+      {src:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230F172A'/><text y='.9em' font-size='80' x='50%' text-anchor='middle' font-family='monospace' font-weight='700' fill='white'>EP</text></svg>",
+       sizes:'512x512',type:'image/svg+xml'}
+    ]
+  };
+  var blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
+  var el=document.getElementById('pwa-manifest');
+  if(el)el.href=URL.createObjectURL(blob);
+  if('serviceWorker' in navigator){
+    var sw='self.addEventListener("install",function(e){self.skipWaiting();});'+
+      'self.addEventListener("activate",function(e){e.waitUntil(self.clients.claim());});'+
+      'self.addEventListener("fetch",function(e){e.respondWith(fetch(e.request).catch(function(){return caches.match(e.request);}));});';
+    navigator.serviceWorker.register(
+      URL.createObjectURL(new Blob([sw],{type:'application/javascript'}))
+    ).catch(function(){});
+  }
+})();
+
+function dismissBanner(){var b=document.getElementById('install-banner');if(b)b.style.display='none';localStorage.setItem('ep_nobanner','1');}
+// Banner installazione iOS
+(function(){
+  var isIos=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  var isStandalone=window.navigator.standalone===true;
+  var dismissed=localStorage.getItem('ep_nobanner')==='1';
+  if(isIos&&!isStandalone&&!dismissed){
+    setTimeout(function(){
+      var b=document.getElementById('install-banner');
+      if(b)b.style.display='block';
+    },2000);
+  }
+  // Android/Chrome: usa evento beforeinstallprompt
+  var deferredPrompt=null;
+  window.addEventListener('beforeinstallprompt',function(e){
+    e.preventDefault();deferredPrompt=e;
+    var b=document.getElementById('install-banner');
+    if(b&&!dismissed){
+      b.innerHTML='<div style="display:flex;align-items:center;gap:12px">'+
+        '<div style="width:36px;height:36px;background:white;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#0F172A;font-family:monospace;flex-shrink:0">EP</div>'+
+        '<div style="flex:1"><div style="font-size:13px;font-weight:600;color:white">Installa Portale EP</div>'+
+        '<div style="font-size:11px;color:rgba(255,255,255,.55)">Aggiungi alla schermata home</div></div>'+
+        '<button onclick="installApp()" style="background:white;border:none;color:#0F172A;font-size:12px;font-weight:600;padding:7px 13px;border-radius:8px;cursor:pointer">Installa</button>'+
+        '<button onclick="dismissBanner()" style="background:none;border:none;color:rgba(255,255,255,.5);font-size:20px;cursor:pointer;line-height:1;padding:4px">×</button>'+
+        '</div>';
+      b.style.display='block';
+    }
+  });
+  window.installApp=function(){
+    if(!deferredPrompt)return;
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(function(){deferredPrompt=null;document.getElementById('install-banner').style.display='none';});
+  };
+})();
+
+</script>
+</body>
+</html>

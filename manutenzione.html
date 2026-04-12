@@ -161,7 +161,7 @@ html,body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-h
 <body>
 
 <!-- LOGIN -->
-<div id="login">
+<div id="login" style="display:flex">
   <div class="lbox">
     <div class="lbrand"><div class="licon">EP</div><div><div class="lname">Effe Printing S.r.l.</div><div class="lsub">Reparto Manutenzione</div></div></div>
     <div class="ltitle">Accedi</div>
@@ -438,7 +438,7 @@ html,body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-h
   var params=new URLSearchParams(window.location.search);
   var fromUrl=params.get('t')===TOKEN;
   var fromSession=sessionStorage.getItem('ep_token')===TOKEN;
-  if(!fromUrl&&!fromSession){window.location.replace('portale.html');return;}
+  if(!fromUrl&&!fromSession){window.location.replace('index.html');return;}
   sessionStorage.setItem('ep_token',TOKEN);
 })();
 
@@ -516,7 +516,8 @@ function doLogout(){
   G('app').classList.remove('on');G('login').style.display='flex';
 }
 async function avviaApp(){
-  G('login').style.display='none';G('app').classList.add('on');
+  var loginEl=G('login');if(loginEl)loginEl.style.display='none';
+  var appEl=G('app');if(appEl){appEl.style.display='block';appEl.classList.add('on');}
   G('tbRole').textContent=ROLE==='responsabile'?'Responsabile':'Manutentore';
   // Mostra nav corretto
   G('nav-manu').style.display=ROLE==='manutentore'?'flex':'none';
