@@ -1,0 +1,65 @@
+/* ══════════════════════════════════════════════════════════════
+   Effe Printing — design system condiviso
+   Contiene SOLO elementi veramente identici tra file:
+   - Reset box-sizing
+   - Font families (DM Sans + DM Mono)
+   - Classi universali: .sdot (status dot), .toast, .loader
+   - Variabili tipografiche base
+   Le palette cromatiche restano in ogni file perche' tematiche.
+   ══════════════════════════════════════════════════════════════ */
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --sans:'DM Sans',sans-serif;
+  --mono:'DM Mono',monospace;
+  --r:10px;
+  --r2:14px;
+  --sh:0 1px 3px rgba(0,0,0,.07),0 4px 12px rgba(0,0,0,.05);
+  --sh-lg:0 1px 4px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.05);
+}
+
+html,body{
+  font-family:var(--sans);
+  min-height:100vh;
+  -webkit-tap-highlight-color:transparent;
+}
+
+/* ═══ STATUS DOT (nella topbar) ═══ */
+.sdot{
+  width:8px;height:8px;border-radius:50%;background:#10B981;
+  transition:background .2s;display:inline-block
+}
+.sdot.busy{background:#F59E0B;animation:sdot-pulse 1s ease-in-out infinite}
+.sdot.err{background:#EF4444}
+@keyframes sdot-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ═══ TOAST ═══ */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(120%);
+  background:#0E1117;color:white;padding:12px 20px;border-radius:10px;
+  font-size:14px;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.25);
+  z-index:9999;transition:transform .25s ease;max-width:90vw;
+  text-align:center;pointer-events:none
+}
+.toast.on{transform:translateX(-50%) translateY(0)}
+.toast.err{background:#B91C1C}
+
+/* ═══ LOADER (overlay di caricamento globale) ═══ */
+.loader{
+  position:fixed;inset:0;background:rgba(255,255,255,.85);backdrop-filter:blur(4px);
+  display:none;align-items:center;justify-content:center;z-index:9998;flex-direction:column;gap:14px
+}
+.loader.on{display:flex}
+.loader::before{
+  content:'';width:36px;height:36px;border:3px solid #E0DED6;
+  border-top-color:#1E3A5F;border-radius:50%;animation:loader-spin .8s linear infinite
+}
+@keyframes loader-spin{to{transform:rotate(360deg)}}
+
+/* ═══ BTN-SPIN (spinner piccolo dentro i bottoni) ═══ */
+.btn-spin{
+  display:inline-block;width:14px;height:14px;border:2px solid currentColor;
+  border-right-color:transparent;border-radius:50%;animation:loader-spin .7s linear infinite;
+  margin-right:8px;vertical-align:middle
+}
