@@ -537,6 +537,100 @@
     margin-right: 8px;
     font-family: 'DM Mono', monospace;
   }
+  /* ─── TABS BAR (selettore periodo bilancio) ─── */
+  .tabs-bar {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+    background: var(--white);
+    padding: 6px;
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tab-btn {
+    flex: 1;
+    min-width: 90px;
+    background: transparent;
+    border: none;
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--grey-600);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .tab-btn:hover {
+    background: var(--grey-100);
+    color: var(--navy);
+  }
+  .tab-btn.active {
+    background: var(--navy-2);
+    color: #fff;
+  }
+  .tab-btn.active:hover {
+    background: var(--navy);
+  }
+
+  /* ─── DETAILS TABLE (lista giorni/mesi) ─── */
+  .details-table {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 8px;
+    box-shadow: var(--shadow);
+    overflow-x: auto;
+  }
+  .details-table table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 500px;
+  }
+  .details-table th {
+    text-align: left;
+    padding: 10px 12px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--grey-600);
+    border-bottom: 1px solid var(--grey-200);
+  }
+  .details-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--grey-100);
+    color: var(--grey-800);
+  }
+  .details-table tr:last-child td {
+    border-bottom: none;
+  }
+  .details-table tr:hover td {
+    background: var(--grey-50);
+  }
+  .details-table .num {
+    font-family: 'DM Mono', monospace;
+    text-align: right;
+    font-size: 12px;
+  }
+  .details-table .eur {
+    font-weight: 600;
+    color: var(--green);
+  }
+  .details-table .zero-tag {
+    display: inline-block;
+    padding: 2px 6px;
+    background: #fff4e6;
+    color: var(--amber);
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+
   @media (max-width: 600px) {
     .user-badge { display: none; }
   }
@@ -630,19 +724,33 @@
 
 <!-- ─────────── BILANCIO ECONOMICO GSE ─────────── -->
 <div class="section">
-  <div class="section-title"><span class="section-icon">💶</span>Bilancio economico oggi — Ritiro Dedicato GSE / MGP CSUD</div>
+  <div class="section-title"><span class="section-icon">💶</span>Ricavi Ritiro Dedicato GSE / MGP CSUD</div>
+
+  <!-- Tab selector -->
+  <div class="tabs-bar" id="bilancio-tabs">
+    <button class="tab-btn active" data-tab="oggi">📅 Oggi</button>
+    <button class="tab-btn" data-tab="giorni">📊 Ultimi 30 giorni</button>
+    <button class="tab-btn" data-tab="mesi">🗓️ Mensile</button>
+  </div>
+
+  <!-- KPI dinamici (cambiano in base al tab) -->
   <div class="kpi-grid" id="bilancio-kpi">
     <div class="state-msg"><span class="spinner"></span>Caricamento bilancio…</div>
   </div>
+
+  <!-- Chart card -->
   <div class="chart-card" style="margin-top:12px">
     <div class="chart-header">
-      <div class="chart-title">📊 Produzione vs prezzo zonale orario</div>
+      <div class="chart-title" id="bilancio-chart-title">📊 Produzione vs prezzo zonale orario</div>
       <div class="chart-legend" id="bilancio-legend">—</div>
     </div>
     <div class="chart-wrap">
       <canvas id="bilancioChart"></canvas>
     </div>
   </div>
+
+  <!-- Dettaglio tabellare (solo per tab 30gg e mensile) -->
+  <div id="bilancio-details" style="display:none;margin-top:12px"></div>
 </div>
 
 <!-- ─────────── BILL / ECONOMICS ─────────── -->
@@ -883,18 +991,40 @@ function renderChart(rows) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// BILANCIO ECONOMICO ORARIO (produzione × prezzo MGP CSUD)
+// BILANCIO ECONOMICO — tab interattivi (Oggi / 30 giorni / Mensile)
 // ═══════════════════════════════════════════════════════════════
+let bilancioChartInstance = null;
+let currentTab = 'oggi';
+// Cache dei dati caricati (evita re-fetch quando si cambia tab)
+const bilancioCache = { oggi: null, giorni: null, mesi: null };
+
+// Setup listeners sui tab button (una sola volta)
+document.getElementById('bilancio-tabs').addEventListener('click', (e) => {
+  const btn = e.target.closest('.tab-btn');
+  if (!btn) return;
+  const tab = btn.dataset.tab;
+  if (tab === currentTab) return;
+
+  // Aggiorno UI dei pulsanti
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  currentTab = tab;
+  renderBilancioCurrentTab();
+});
+
 async function loadBilancio() {
+  // Ricarica tutti i dati in background e aggiorna il tab attivo
   try {
-    const rows = await supaGet('bilancio_orario_oggi?order=ora.asc');
-    if (!rows || rows.length === 0) {
-      document.getElementById('bilancio-kpi').innerHTML =
-        '<div class="state-msg">Nessun dato di bilancio disponibile per oggi.</div>';
-      return;
-    }
-    renderBilancioKpi(rows);
-    renderBilancioChart(rows);
+    const [oggi, giorni, mesi] = await Promise.all([
+      supaGet('bilancio_orario_oggi?order=ora.asc').catch(() => []),
+      supaGet('bilancio_giornaliero?order=data.desc&limit=30').catch(() => []),
+      supaGet('bilancio_mensile?order=mese.desc&limit=12').catch(() => [])
+    ]);
+    bilancioCache.oggi = oggi;
+    bilancioCache.giorni = giorni;
+    bilancioCache.mesi = mesi;
+    renderBilancioCurrentTab();
   } catch (err) {
     console.error(err);
     document.getElementById('bilancio-kpi').innerHTML =
@@ -902,11 +1032,55 @@ async function loadBilancio() {
   }
 }
 
-function renderBilancioKpi(rows) {
+function renderBilancioCurrentTab() {
+  const detailsBox = document.getElementById('bilancio-details');
+  const titleEl = document.getElementById('bilancio-chart-title');
+
+  if (currentTab === 'oggi') {
+    const rows = bilancioCache.oggi || [];
+    titleEl.textContent = '📊 Produzione vs prezzo zonale orario';
+    detailsBox.style.display = 'none';
+    if (!rows.length) {
+      document.getElementById('bilancio-kpi').innerHTML =
+        '<div class="state-msg">Nessun dato disponibile per oggi.</div>';
+      if (bilancioChartInstance) { bilancioChartInstance.destroy(); bilancioChartInstance = null; }
+      return;
+    }
+    renderBilancioOggiKpi(rows);
+    renderBilancioOggiChart(rows);
+  } else if (currentTab === 'giorni') {
+    const rows = bilancioCache.giorni || [];
+    titleEl.textContent = '📊 Ricavo giornaliero ultimi 30 giorni';
+    if (!rows.length) {
+      document.getElementById('bilancio-kpi').innerHTML =
+        '<div class="state-msg">Nessun dato disponibile.</div>';
+      detailsBox.style.display = 'none';
+      if (bilancioChartInstance) { bilancioChartInstance.destroy(); bilancioChartInstance = null; }
+      return;
+    }
+    renderBilancioGiorniKpi(rows);
+    renderBilancioGiorniChart(rows);
+    renderBilancioGiorniTable(rows);
+  } else if (currentTab === 'mesi') {
+    const rows = bilancioCache.mesi || [];
+    titleEl.textContent = '📊 Ricavo mensile storico';
+    if (!rows.length) {
+      document.getElementById('bilancio-kpi').innerHTML =
+        '<div class="state-msg">Nessun dato disponibile.</div>';
+      detailsBox.style.display = 'none';
+      if (bilancioChartInstance) { bilancioChartInstance.destroy(); bilancioChartInstance = null; }
+      return;
+    }
+    renderBilancioMesiKpi(rows);
+    renderBilancioMesiChart(rows);
+    renderBilancioMesiTable(rows);
+  }
+}
+
+// ── TAB: OGGI ─────────────────────────────────────────────────
+function renderBilancioOggiKpi(rows) {
   const totKwh = rows.reduce((s, r) => s + (parseFloat(r.produzione_kwh) || 0), 0);
   const totEur = rows.reduce((s, r) => s + (parseFloat(r.ricavo_teorico_eur) || 0), 0);
-
-  // Prezzo medio pesato sulla produzione (più realistico della media aritmetica)
   let prezzoMedio = 0;
   if (totKwh > 0) {
     prezzoMedio = (totEur * 1000) / totKwh;
@@ -914,7 +1088,6 @@ function renderBilancioKpi(rows) {
     const prezzi = rows.map(r => parseFloat(r.prezzo_eur_mwh) || 0);
     prezzoMedio = prezzi.length ? prezzi.reduce((a,b) => a+b, 0) / prezzi.length : 0;
   }
-
   const totMwh = totKwh / 1000;
 
   document.getElementById('bilancio-kpi').innerHTML = `
@@ -936,138 +1109,332 @@ function renderBilancioKpi(rows) {
   `;
 }
 
-let bilancioChartInstance = null;
-function renderBilancioChart(rows) {
+function renderBilancioOggiChart(rows) {
   const labels = rows.map(r => String(r.ora).padStart(2, '0') + ':00');
   const dataKwh = rows.map(r => parseFloat(r.produzione_kwh) || 0);
   const dataPrezzo = rows.map(r => parseFloat(r.prezzo_eur_mwh) || 0);
 
-  const ctx = document.getElementById('bilancioChart').getContext('2d');
   if (bilancioChartInstance) bilancioChartInstance.destroy();
+  const ctx = document.getElementById('bilancioChart').getContext('2d');
 
   bilancioChartInstance = new Chart(ctx, {
     data: {
       labels,
       datasets: [
         {
-          type: 'bar',
-          label: 'Produzione (kWh)',
-          data: dataKwh,
-          backgroundColor: 'rgba(59, 91, 219, 0.75)',
-          borderRadius: 4,
-          yAxisID: 'y',
-          order: 2
+          type: 'bar', label: 'Produzione (kWh)', data: dataKwh,
+          backgroundColor: 'rgba(59, 91, 219, 0.75)', borderRadius: 4,
+          yAxisID: 'y', order: 2
         },
         {
-          type: 'line',
-          label: 'Prezzo MGP (€/MWh)',
-          data: dataPrezzo,
-          borderColor: '#12b886',
-          backgroundColor: 'rgba(18, 184, 134, 0.08)',
-          borderWidth: 2.5,
-          tension: 0.3,
-          pointRadius: 3,
-          pointBackgroundColor: '#12b886',
-          pointBorderColor: '#fff',
-          pointBorderWidth: 1.5,
-          yAxisID: 'y1',
-          order: 1,
-          fill: false
+          type: 'line', label: 'Prezzo MGP (€/MWh)', data: dataPrezzo,
+          borderColor: '#12b886', backgroundColor: 'rgba(18, 184, 134, 0.08)',
+          borderWidth: 2.5, tension: 0.3, pointRadius: 3,
+          pointBackgroundColor: '#12b886', pointBorderColor: '#fff',
+          pointBorderWidth: 1.5, yAxisID: 'y1', order: 1, fill: false
         }
       ]
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: true,
-          position: 'bottom',
-          labels: {
-            font: { family: 'Barlow', size: 11 },
-            padding: 12,
-            boxWidth: 14,
-            boxHeight: 10,
-            usePointStyle: false
-          }
-        },
-        tooltip: {
-          backgroundColor: '#1a2035',
-          titleColor: '#fff',
-          bodyColor: '#fff',
-          padding: 10,
-          borderColor: 'rgba(255,255,255,0.1)',
-          borderWidth: 1,
-          callbacks: {
-            label: (ctx) => {
-              const v = ctx.parsed.y;
-              if (ctx.dataset.label.includes('Produzione')) return ` ${fmt(v, 1)} kWh`;
-              return ` ${fmt(v, 2)} €/MWh`;
-            },
-            footer: (items) => {
-              const kwh = items.find(i => i.dataset.label.includes('Produzione'))?.parsed.y || 0;
-              const eurMwh = items.find(i => i.dataset.label.includes('Prezzo'))?.parsed.y || 0;
-              const ricavo = kwh * eurMwh / 1000;
-              return ricavo > 0.01 ? `Ricavo ora: ${fmt(ricavo, 2)} €` : '';
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: {
-            color: '#adb5bd',
-            font: { family: 'DM Mono', size: 10 },
-            maxTicksLimit: 12,
-            autoSkip: true
-          }
-        },
-        y: {
-          position: 'left',
-          beginAtZero: true,
-          grid: { color: 'rgba(15,31,53,0.04)' },
-          ticks: {
-            color: '#3b5bdb',
-            font: { family: 'DM Mono', size: 10 },
-            callback: (v) => fmt(v, 0)
-          },
-          title: {
-            display: true,
-            text: 'kWh',
-            color: '#3b5bdb',
-            font: { family: 'DM Mono', size: 10, weight: '600' }
-          }
-        },
-        y1: {
-          position: 'right',
-          beginAtZero: true,
-          grid: { display: false },
-          ticks: {
-            color: '#12b886',
-            font: { family: 'DM Mono', size: 10 },
-            callback: (v) => fmt(v, 0)
-          },
-          title: {
-            display: true,
-            text: '€/MWh',
-            color: '#12b886',
-            font: { family: 'DM Mono', size: 10, weight: '600' }
-          }
-        }
-      },
-      interaction: { mode: 'index', intersect: false }
-    }
+    options: bilancioChartOptions('kWh', '€/MWh', (ctx) => {
+      const v = ctx.parsed.y;
+      return ctx.dataset.label.includes('Produzione') ? ` ${fmt(v, 1)} kWh` : ` ${fmt(v, 2)} €/MWh`;
+    })
   });
 
-  // Legenda riassuntiva
   const prezziNonZero = dataPrezzo.filter(p => p > 0);
   const peakEur = prezziNonZero.length ? Math.max(...prezziNonZero) : 0;
   const nZero = dataPrezzo.filter(p => p === 0).length;
-  const legendText = nZero > 0
+  document.getElementById('bilancio-legend').textContent = nZero > 0
     ? `Max ${fmt(peakEur, 0)} €/MWh · ${nZero} h a 0 €/MWh`
     : `Max ${fmt(peakEur, 0)} €/MWh`;
-  document.getElementById('bilancio-legend').textContent = legendText;
+}
+
+// ── TAB: ULTIMI 30 GIORNI ─────────────────────────────────────
+function renderBilancioGiorniKpi(rows) {
+  const totMwh = rows.reduce((s, r) => s + (parseFloat(r.produzione_mwh) || 0), 0);
+  const totEur = rows.reduce((s, r) => s + (parseFloat(r.ricavo_eur) || 0), 0);
+  const totOreZero = rows.reduce((s, r) => s + (parseInt(r.ore_a_zero) || 0), 0);
+  const media = rows.length ? totEur / rows.length : 0;
+
+  document.getElementById('bilancio-kpi').innerHTML = `
+    <div class="kpi-card accent-blue">
+      <div><span class="kpi-value">${fmt(totMwh, 1)}</span><span class="kpi-unit">MWh</span></div>
+      <div class="kpi-label">☀ Produzione totale</div>
+      <div class="kpi-sub">${rows.length} giorni registrati</div>
+    </div>
+    <div class="kpi-card accent-green">
+      <div><span class="kpi-value">${fmt(totEur, 0)}</span><span class="kpi-unit">€</span></div>
+      <div class="kpi-label">💶 Ricavo totale</div>
+      <div class="kpi-sub">media ${fmt(media, 2)} €/giorno</div>
+    </div>
+    <div class="kpi-card accent-amber">
+      <div><span class="kpi-value">${totOreZero}</span><span class="kpi-unit">h</span></div>
+      <div class="kpi-label">⚠️ Ore a prezzo zero</div>
+      <div class="kpi-sub">duck curve CSUD</div>
+    </div>
+  `;
+}
+
+function renderBilancioGiorniChart(rows) {
+  // Ordino cronologicamente (rows viene desc dal backend)
+  const sorted = [...rows].reverse();
+  const labels = sorted.map(r => {
+    const d = new Date(r.data);
+    return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+  });
+  const dataEur = sorted.map(r => parseFloat(r.ricavo_eur) || 0);
+  const dataMwh = sorted.map(r => parseFloat(r.produzione_mwh) || 0);
+
+  if (bilancioChartInstance) bilancioChartInstance.destroy();
+  const ctx = document.getElementById('bilancioChart').getContext('2d');
+
+  bilancioChartInstance = new Chart(ctx, {
+    data: {
+      labels,
+      datasets: [
+        {
+          type: 'bar', label: 'Ricavo (€)', data: dataEur,
+          backgroundColor: 'rgba(18, 184, 134, 0.8)', borderRadius: 4,
+          yAxisID: 'y', order: 2
+        },
+        {
+          type: 'line', label: 'Produzione (MWh)', data: dataMwh,
+          borderColor: '#3b5bdb', backgroundColor: 'rgba(59, 91, 219, 0.08)',
+          borderWidth: 2.5, tension: 0.3, pointRadius: 3,
+          pointBackgroundColor: '#3b5bdb', pointBorderColor: '#fff',
+          pointBorderWidth: 1.5, yAxisID: 'y1', order: 1, fill: false
+        }
+      ]
+    },
+    options: bilancioChartOptions('€', 'MWh', (ctx) => {
+      const v = ctx.parsed.y;
+      return ctx.dataset.label.includes('Ricavo') ? ` ${fmt(v, 2)} €` : ` ${fmt(v, 2)} MWh`;
+    })
+  });
+
+  const peakDay = [...rows].sort((a,b) => b.ricavo_eur - a.ricavo_eur)[0];
+  if (peakDay) {
+    const d = new Date(peakDay.data).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
+    document.getElementById('bilancio-legend').textContent =
+      `Miglior giorno: ${d} (${fmt(peakDay.ricavo_eur, 2)} €)`;
+  } else {
+    document.getElementById('bilancio-legend').textContent = '—';
+  }
+}
+
+function renderBilancioGiorniTable(rows) {
+  const html = `
+    <div class="details-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th class="num">Produzione</th>
+            <th class="num">Prezzo medio pesato</th>
+            <th class="num">Ore a 0€</th>
+            <th class="num">Ricavo</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => {
+            const d = new Date(r.data).toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: 'short' });
+            const pMwh = parseFloat(r.produzione_mwh) || 0;
+            const prezzo = parseFloat(r.prezzo_medio_pesato_eur_mwh) || 0;
+            const oreZero = parseInt(r.ore_a_zero) || 0;
+            const eur = parseFloat(r.ricavo_eur) || 0;
+            return `
+              <tr>
+                <td style="text-transform:capitalize">${d}</td>
+                <td class="num">${fmt(pMwh, 2)} MWh</td>
+                <td class="num">${fmt(prezzo, 1)} €/MWh</td>
+                <td class="num">${oreZero > 0 ? `<span class="zero-tag">${oreZero}h</span>` : '—'}</td>
+                <td class="num eur">${fmt(eur, 2)} €</td>
+              </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  const box = document.getElementById('bilancio-details');
+  box.innerHTML = html;
+  box.style.display = 'block';
+}
+
+// ── TAB: MENSILE ──────────────────────────────────────────────
+function renderBilancioMesiKpi(rows) {
+  const totMwh = rows.reduce((s, r) => s + (parseFloat(r.produzione_mwh) || 0), 0);
+  const totEur = rows.reduce((s, r) => s + (parseFloat(r.ricavo_eur) || 0), 0);
+  const ultimo = rows[0];
+  const precedente = rows[1];
+  let deltaText = 'Primo mese registrato';
+  let deltaClass = 'accent-amber';
+  if (ultimo && precedente) {
+    const delta = parseFloat(ultimo.ricavo_eur) - parseFloat(precedente.ricavo_eur);
+    const deltaPct = precedente.ricavo_eur > 0 ? (delta / precedente.ricavo_eur * 100) : 0;
+    const segno = delta >= 0 ? '↑' : '↓';
+    deltaText = `${segno} ${fmt(Math.abs(delta), 0)} € (${fmt(Math.abs(deltaPct), 1)}%) vs mese prec.`;
+    deltaClass = delta >= 0 ? 'accent-green' : 'accent-amber';
+  }
+
+  document.getElementById('bilancio-kpi').innerHTML = `
+    <div class="kpi-card accent-blue">
+      <div><span class="kpi-value">${fmt(totMwh, 1)}</span><span class="kpi-unit">MWh</span></div>
+      <div class="kpi-label">☀ Produzione totale</div>
+      <div class="kpi-sub">${rows.length} mesi registrati</div>
+    </div>
+    <div class="kpi-card accent-green">
+      <div><span class="kpi-value">${fmt(totEur, 0)}</span><span class="kpi-unit">€</span></div>
+      <div class="kpi-label">💶 Ricavo totale</div>
+      <div class="kpi-sub">cumulato storico</div>
+    </div>
+    <div class="kpi-card ${deltaClass}">
+      <div><span class="kpi-value">${ultimo ? fmt(parseFloat(ultimo.ricavo_eur), 0) : '—'}</span><span class="kpi-unit">€</span></div>
+      <div class="kpi-label">📈 Ultimo mese</div>
+      <div class="kpi-sub">${deltaText}</div>
+    </div>
+  `;
+}
+
+function renderBilancioMesiChart(rows) {
+  const sorted = [...rows].reverse();
+  const labels = sorted.map(r => {
+    const d = new Date(r.mese);
+    return d.toLocaleDateString('it-IT', { month: 'short', year: '2-digit' });
+  });
+  const dataEur = sorted.map(r => parseFloat(r.ricavo_eur) || 0);
+  const dataMwh = sorted.map(r => parseFloat(r.produzione_mwh) || 0);
+
+  if (bilancioChartInstance) bilancioChartInstance.destroy();
+  const ctx = document.getElementById('bilancioChart').getContext('2d');
+
+  bilancioChartInstance = new Chart(ctx, {
+    data: {
+      labels,
+      datasets: [
+        {
+          type: 'bar', label: 'Ricavo (€)', data: dataEur,
+          backgroundColor: 'rgba(18, 184, 134, 0.8)', borderRadius: 4,
+          yAxisID: 'y', order: 2
+        },
+        {
+          type: 'line', label: 'Produzione (MWh)', data: dataMwh,
+          borderColor: '#3b5bdb', backgroundColor: 'rgba(59, 91, 219, 0.08)',
+          borderWidth: 2.5, tension: 0.3, pointRadius: 4,
+          pointBackgroundColor: '#3b5bdb', pointBorderColor: '#fff',
+          pointBorderWidth: 1.5, yAxisID: 'y1', order: 1, fill: false
+        }
+      ]
+    },
+    options: bilancioChartOptions('€', 'MWh', (ctx) => {
+      const v = ctx.parsed.y;
+      return ctx.dataset.label.includes('Ricavo') ? ` ${fmt(v, 0)} €` : ` ${fmt(v, 2)} MWh`;
+    })
+  });
+
+  const peakMese = [...rows].sort((a,b) => b.ricavo_eur - a.ricavo_eur)[0];
+  if (peakMese) {
+    const d = new Date(peakMese.mese).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+    document.getElementById('bilancio-legend').textContent =
+      `Miglior mese: ${d} (${fmt(peakMese.ricavo_eur, 0)} €)`;
+  } else {
+    document.getElementById('bilancio-legend').textContent = '—';
+  }
+}
+
+function renderBilancioMesiTable(rows) {
+  const html = `
+    <div class="details-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Mese</th>
+            <th class="num">Giorni</th>
+            <th class="num">Produzione</th>
+            <th class="num">Prezzo medio pesato</th>
+            <th class="num">Ricavo</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => {
+            const d = new Date(r.mese).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+            const pMwh = parseFloat(r.produzione_mwh) || 0;
+            const prezzo = parseFloat(r.prezzo_medio_pesato_eur_mwh) || 0;
+            const eur = parseFloat(r.ricavo_eur) || 0;
+            return `
+              <tr>
+                <td style="text-transform:capitalize">${d}</td>
+                <td class="num">${r.n_giorni}</td>
+                <td class="num">${fmt(pMwh, 1)} MWh</td>
+                <td class="num">${fmt(prezzo, 1)} €/MWh</td>
+                <td class="num eur">${fmt(eur, 0)} €</td>
+              </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  const box = document.getElementById('bilancio-details');
+  box.innerHTML = html;
+  box.style.display = 'block';
+}
+
+// ── OPZIONI CHART CONDIVISE (dual-axis) ──────────────────────
+function bilancioChartOptions(yLeftLabel, yRightLabel, labelCallback) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true, position: 'bottom',
+        labels: {
+          font: { family: 'Barlow', size: 11 }, padding: 12,
+          boxWidth: 14, boxHeight: 10, usePointStyle: false
+        }
+      },
+      tooltip: {
+        backgroundColor: '#1a2035', titleColor: '#fff', bodyColor: '#fff',
+        padding: 10, borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1,
+        callbacks: { label: labelCallback }
+      }
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: {
+          color: '#adb5bd',
+          font: { family: 'DM Mono', size: 10 },
+          maxTicksLimit: 12, autoSkip: true
+        }
+      },
+      y: {
+        position: 'left', beginAtZero: true,
+        grid: { color: 'rgba(15,31,53,0.04)' },
+        ticks: {
+          color: '#12b886',
+          font: { family: 'DM Mono', size: 10 },
+          callback: (v) => fmt(v, 0)
+        },
+        title: {
+          display: true, text: yLeftLabel,
+          color: '#12b886',
+          font: { family: 'DM Mono', size: 10, weight: '600' }
+        }
+      },
+      y1: {
+        position: 'right', beginAtZero: true,
+        grid: { display: false },
+        ticks: {
+          color: '#3b5bdb',
+          font: { family: 'DM Mono', size: 10 },
+          callback: (v) => fmt(v, 0)
+        },
+        title: {
+          display: true, text: yRightLabel,
+          color: '#3b5bdb',
+          font: { family: 'DM Mono', size: 10, weight: '600' }
+        }
+      }
+    },
+    interaction: { mode: 'index', intersect: false }
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════
