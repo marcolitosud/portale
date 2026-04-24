@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Programmazione stampa · Effe Printing</title>
+
+<script>
+/* ═══ GUARD SESSIONE ═══ */
+(function(){
+  try{
+    var raw = localStorage.getItem('ep_sess3_progr_stampa');
+    if(!raw){ window.location.replace('portale.html'); return; }
+    var sess = JSON.parse(raw);
+    if(!sess || !sess.ts || Date.now() - sess.ts >= 90*24*60*60*1000){
+      window.location.replace('portale.html');
+    }
+  }catch(e){ window.location.replace('portale.html'); }
+})();
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+
+<style>
+body{background:#FAFAF5;color:#0E1117;font-family:'DM Sans',sans-serif}
+
+.topbar{background:#0E1C36;color:#FAFAF5;display:flex;align-items:center;padding:10px 18px;gap:14px;position:sticky;top:0;z-index:30}
+.tb-brand{background:#1E3A5F;color:#FAFAF5;font-weight:500;font-size:11px;padding:4px 8px;border-radius:4px;letter-spacing:.5px}
+.tb-title{font-size:15px;font-weight:500;flex:1;display:flex;align-items:center;gap:8px}
+.tb-title .sdot{background:#10B981}
+.tb-clock{font-family:'DM Mono',monospace;font-size:13px;opacity:.8}
+.tb-back{background:transparent;border:0.5px solid rgba(250,250,245,.25);color:#FAFAF5;font-size:12px;padding:4px 10px;border-radius:6px;cursor:pointer;text-decoration:none}
+.tb-back:hover{background:rgba(255,255,255,.08)}
+
+.hero{background:#1E3A5F;color:#FAFAF5;padding:14px 18px;display:flex;justify-content:space-between;align-items:center}
+.hero-wk{font-size:15px;font-weight:500}
+.hero-rg{font-size:12px;opacity:.75;margin-top:2px}
+.hero-nav{display:flex;align-items:center;gap:8px}
+.hero-nav button{background:rgba(255,255,255,.1);border:0.5px solid rgba(255,255,255,.15);color:#FAFAF5;width:30px;height:30px;border-radius:4px;cursor:pointer;font-size:14px;padding:0;font-family:inherit}
+.hero-nav button:hover{background:rgba(255,255,255,.18)}
+.hero-nav button.wide{width:auto;padding:0 12px;font-size:12px}
+
+.daypills{display:flex;padding:10px 18px;gap:4px;background:#FFFFFF;border-bottom:0.5px solid #E0DED6}
+.dp{flex:1;text-align:center;padding:6px 4px;border-radius:6px;cursor:pointer;transition:background .15s;min-width:0}
+.dp.act{background:#E6F0FB}
+.dp-l{font-size:11px;color:#5F6570}
+.dp.act .dp-l{color:#1E3A5F;font-weight:500}
+.dp-n{font-size:10px;color:#8A8B85;margin-top:2px}
+.dp.act .dp-n{color:#1E3A5F}
+
+.sect{background:#FFFFFF;padding:10px 18px;border-bottom:0.5px solid #E0DED6}
+.sh{font-size:10px;color:#5F6570;margin-bottom:6px;letter-spacing:.5px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.sh-r{font-family:'DM Mono',monospace;text-transform:none;letter-spacing:0;color:#8A8B85;font-size:10px}
+
+.basket{transition:background .15s}
+.basket.ov{background:#E6F0FB}
+.bkr{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;min-height:64px}
+.bkr::-webkit-scrollbar{height:4px}
+.bkr::-webkit-scrollbar-thumb{background:#D4D3CC;border-radius:2px}
+.bkr:empty::after{content:'Nessuna segnatura da pianificare';color:#8A8B85;font-size:11px;font-style:italic;padding:20px;width:100%;text-align:center;text-transform:none;letter-spacing:0}
+.bkc{flex:0 0 auto;width:160px;background:#FFFFFF;border:0.5px solid #E0DED6;border-left-width:3px;border-radius:5px;padding:7px 9px;cursor:grab}
+.bkc:hover{border-color:#1E3A5F}
+.bkc.dg{opacity:.3}
+.bkc.ripresa{background:#FFFCF5}
+.bkc .tt{font-size:12px;font-weight:500;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bkc .tag{display:inline-block;font-size:9px;padding:0 4px;background:#FEF3C7;color:#92400E;border-radius:2px;margin-right:3px;font-weight:500;vertical-align:1px}
+.bkc .mm{font-size:10px;color:#5F6570;line-height:1.25;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bkc .dd{font-size:10px;margin-top:4px;padding-top:4px;border-top:0.5px solid #E0DED6;display:flex;justify-content:space-between}
+.bkc .dd b{font-weight:500}
+
+.timeline{background:#FFFFFF;border-bottom:0.5px solid #E0DED6}
+.tl-h{padding:10px 18px 6px;font-size:13px;color:#5F6570;display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap}
+.tl-hint{font-size:10px;color:#8A8B85;font-family:'DM Mono',monospace}
+.tl-wrap{padding:0 18px 12px}
+.tl-hd{display:flex;gap:4px;padding:0 2px;border-bottom:0.5px solid #E0DED6;background:#FFFFFF;position:sticky;top:0;z-index:10}
+.tl-hd>div{padding:6px 4px;font-size:11px;color:#5F6570;text-align:center;flex-shrink:0}
+.tl-hd>div.mn{font-weight:500;color:#0E1117}
+.tl-body{display:flex;gap:4px;padding:0 2px;position:relative;max-height:calc(100vh - 200px);min-height:440px;overflow-y:auto;overflow-x:hidden}
+.tl-body::-webkit-scrollbar{width:10px}
+.tl-body::-webkit-scrollbar-thumb{background:#B4B3AC;border-radius:5px}
+.tl-body::-webkit-scrollbar-track{background:#F0EFE8}
+.col{flex-shrink:0;position:relative}
+.col.hours{width:32px;background:#FFFFFF}
+.col.hours .lbl{position:absolute;right:4px;font-size:10px;color:#5F6570;font-family:'DM Mono',monospace;line-height:1;padding-top:3px;font-weight:500}
+.col.shifts{width:22px}
+.col.shifts .sh-band{position:absolute;left:0;right:0;display:flex;align-items:flex-start;justify-content:center;padding-top:6px;font-size:9px;font-weight:500;letter-spacing:.5px}
+.col.shifts .sh-III{background:#EDE9FE;color:#6B21A8}
+.col.shifts .sh-I{background:#DBEAFE;color:#1E40AF}
+.col.shifts .sh-II{background:#FEF3C7;color:#92400E}
+.col.tk{min-width:0;background-color:#F5F3ED;background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 21.5px,rgba(14,28,54,.08) 21.5px,rgba(14,28,54,.08) 22px);border-radius:4px}
+.col.tk.af,.col.tk.inc{width:78px;flex-shrink:0}
+.col.tk.mn{background-color:#F0EFE8;flex:1}
+.col.tk.ov{background-color:#E6F0FB;outline:1.5px solid #1E3A5F}
+.col .shift-b{position:absolute;left:0;right:0;height:1px;background:rgba(14,28,54,.2);pointer-events:none;z-index:1}
+.daysep{position:absolute;left:0;right:0;height:2px;background:#0E1C36;pointer-events:none;z-index:2}
+.daychip{position:absolute;left:2px;top:0;background:#0E1C36;color:#FAFAF5;font-size:10px;font-weight:500;padding:2px 8px;border-radius:0 0 4px 0;z-index:4;letter-spacing:.5px;pointer-events:none;text-transform:uppercase}
+
+.fase{position:absolute;left:3px;right:3px;cursor:grab;user-select:none;overflow:hidden;border:0.5px solid;border-radius:4px;box-sizing:border-box;z-index:3}
+.fase.small{padding:2px 5px;font-size:9px;display:flex;align-items:center;white-space:nowrap;line-height:1.1}
+.fase.big{padding:6px 10px;display:flex;flex-direction:column;font-size:11px;border-radius:5px}
+.fase.dg{opacity:.3}
+.fase.warn{border:1.5px solid #EF4444;outline:1px solid rgba(239,68,68,.3)}
+.fase .tt{font-size:11px;font-weight:500;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fase .mm{font-size:9px;opacity:.85;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.fase.big .tt{font-size:13px;font-weight:500;line-height:1.25;margin-bottom:2px}
+.fase.big .mm{font-size:11px;line-height:1.3;margin-top:1px;opacity:.9}
+
+/* Slot di un turno chiuso: overlay tratteggiato sulle tracce KBA/af/inc */
+.slot-closed{position:absolute;left:0;right:0;pointer-events:none;z-index:2;
+  background:repeating-linear-gradient(-45deg,
+    rgba(107,33,168,.08) 0, rgba(107,33,168,.08) 5px,
+    rgba(107,33,168,.18) 5px, rgba(107,33,168,.18) 10px)}
+/* Fascia turno chiuso sulla colonna shifts */
+.col.shifts .sh-band.closed{opacity:.4;background-image:repeating-linear-gradient(-45deg,
+  rgba(0,0,0,.05) 0, rgba(0,0,0,.05) 4px,
+  rgba(0,0,0,.12) 4px, rgba(0,0,0,.12) 8px)}
+.col.shifts .sh-band{cursor:context-menu}
+.pb{height:3px;border-radius:2px;margin-top:3px;overflow:hidden}
+.ripresa-ico{position:absolute;top:3px;right:4px;font-size:9px;font-weight:500;background:rgba(255,255,255,.7);padding:0 4px;border-radius:2px;z-index:4}
+.now{position:absolute;left:0;right:0;height:1px;background:#EF4444;pointer-events:none;z-index:6}
+.nowl{position:absolute;left:2px;background:#EF4444;color:white;font-size:9px;padding:1px 5px;border-radius:3px;font-weight:500;white-space:nowrap;z-index:7;pointer-events:none;font-family:'DM Mono',monospace;transform:translateY(-50%)}
+
+.cm{position:absolute;background:#FFFFFF;border:0.5px solid #0E1C36;border-radius:6px;padding:4px;z-index:50;min-width:200px}
+.cm .hd{padding:4px 10px;font-size:10px;color:#8A8B85;letter-spacing:.5px;text-transform:uppercase;border-bottom:0.5px solid #E0DED6;margin-bottom:2px}
+.cm button{background:transparent;border:none;padding:7px 10px;width:100%;text-align:left;font-size:12px;color:#0E1117;border-radius:4px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px}
+.cm button:hover{background:#F5F3ED}
+
+.live{background:#FAFAF5;padding:14px 18px 20px}
+.lv-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px}
+.lv-t{font-size:13px;font-weight:500}
+.lv-u{font-size:11px;color:#8A8B85;font-family:'DM Mono',monospace}
+.lv-g{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lvc{background:#FFFFFF;border:0.5px solid #E0DED6;border-radius:6px;padding:12px 14px}
+.lvc.idle{opacity:.6}
+.lvch{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.lvcl{font-size:11px;color:#5F6570}
+.lvcs{font-size:10px;font-weight:500}
+.lvcs.on{color:#10B981}
+.lvcs.off{color:#8A8B85}
+.lvcs.fermo{color:#EF4444}
+.lvcn{font-size:14px;font-weight:500;margin-bottom:6px;line-height:1.2}
+.lvcm{font-size:11px;color:#5F6570;margin-bottom:8px}
+.lvcp{height:4px;border-radius:2px;overflow:hidden}
+.lvcf{display:flex;justify-content:space-between;font-size:10px;color:#8A8B85;margin-top:6px}
+
+@media (max-width:640px){ .lv-g{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="tb-brand">EP</div>
+  <div class="tb-title">Programmazione stampa<span class="sdot"></span></div>
+  <div class="tb-clock" id="tb-clock">--:--:--</div>
+  <a class="tb-back" href="portale.html">← Portale</a>
+</div>
+
+<div class="hero">
+  <div>
+    <div class="hero-wk" id="hero-wk">Settimana —</div>
+    <div class="hero-rg" id="hero-rg">—</div>
+  </div>
+  <div class="hero-nav">
+    <button id="btn-prev" title="Settimana precedente">‹</button>
+    <button id="btn-today" class="wide">Oggi</button>
+    <button id="btn-next" title="Settimana successiva">›</button>
+  </div>
+</div>
+
+<div class="daypills" id="daypills"></div>
+
+<div class="sect basket" id="basket">
+  <div class="sh">
+    <span>Basket segnature · trascina sulle colonne KBA</span>
+    <span class="sh-r">V7 ≥48p 22k · &lt;48p 40k · P5 ≥48p 25k · &lt;48p 35k · avvio 1h30'</span>
+  </div>
+  <div class="bkr" id="blist"></div>
+</div>
+
+<div class="timeline">
+  <div class="tl-h">
+    <span>Visione oraria · scorri per cambiare giorno</span>
+    <span class="tl-hint">fasi indipendenti · tasto destro su KBA per dividere</span>
+  </div>
+  <div class="tl-wrap">
+    <div class="tl-hd">
+      <div style="width:32px"></div>
+      <div style="width:22px"></div>
+      <div style="width:78px">Arr. file</div>
+      <div style="width:78px">Incisione</div>
+      <div class="mn" style="flex:1;min-width:0">KBA 1</div>
+      <div class="mn" style="flex:1;min-width:0">KBA 2</div>
+    </div>
+    <div class="tl-body" id="tlbody">
+      <div class="col hours" id="hcol"></div>
+      <div class="col shifts" id="scol"></div>
+      <div class="col tk af" data-tipo="af"></div>
+      <div class="col tk inc" data-tipo="inc"></div>
+      <div class="col tk mn" data-lane="1"></div>
+      <div class="col tk mn" data-lane="2"></div>
+      <div class="now" id="nl"></div>
+      <div class="nowl" id="nll"></div>
+    </div>
+  </div>
+</div>
+
+<div class="live">
+  <div class="lv-h">
+    <span class="lv-t">In produzione ora</span>
+    <span class="lv-u" id="lv-u">—</span>
+  </div>
+  <div class="lv-g" id="live-grid"></div>
+</div>
+
+<div class="loader" id="loader"></div>
+<div class="toast" id="toast"></div>
+
+<script src="sb.js"></script>
+<script>
+(function(){
+'use strict';
+
+// ═══ Config & palette ══════════════════════════════════════════════
+const PALETTE = {
+  pink:  {bg:'#FBEAF0',fg:'#4B1528',bd:'#D4537E',fill:'#993556',base:'#F4C0D1'},
+  blue:  {bg:'#E6F1FB',fg:'#042C53',bd:'#378ADD',fill:'#185FA5',base:'#B5D4F4'},
+  purple:{bg:'#EEEDFE',fg:'#26215C',bd:'#7F77DD',fill:'#534AB7',base:'#CECBF6'},
+  teal:  {bg:'#E1F5EE',fg:'#04342C',bd:'#1D9E75',fill:'#0F6E56',base:'#9FE1CB'},
+  coral: {bg:'#FAECE7',fg:'#4A1B0C',bd:'#D85A30',fill:'#993C1D',base:'#F5C4B3'},
+  green: {bg:'#EAF3DE',fg:'#173404',bd:'#639922',fill:'#3B6D11',base:'#C0DD97'},
+  amber: {bg:'#FAEEDA',fg:'#412402',bd:'#EF9F27',fill:'#854F0B',base:'#FAC775'}
+};
+const COLOR_MAP = [
+  ['casa facile','pink'], ['u 15','blue'], ['confidenze','purple'],
+  ['venerdì','teal'], ['venerdi','teal'], ['donna','coral'], ['dm','coral'],
+  ['starbene','green'], ['oggi','amber'], ['panorama','blue'],
+  ['chi','pink'], ['tv sorrisi','teal'], ['grazia','purple'],
+  ['pisa','green'], ['livorno','blue'], ['seat','amber']
+];
+const PALETTE_KEYS = ['pink','blue','purple','teal','coral','green','amber'];
+
+const DAYS_SHORT = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
+const DAYS_FULL  = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
+const MESI = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+const DAY_COUNT = 7, PX_H = 22, TOT_H = DAY_COUNT*24*PX_H;
+const DUR_AF = 0.5, DUR_INC = 1;
+const POLL_MS = 10000;
+
+// ═══ State ════════════════════════════════════════════════════════
+const S = {
+  weekStart: null,
+  cartellini: [],      // dalla tabella `cartellini`
+  pianificazioni: [],  // dalla tabella `progr_cartellini`
+  prodActive: {kba1:null, kba2:null},  // dalla tabella `prod_active`
+  turniChiusi: [],     // dalla tabella `progr_turni_chiusi`
+  activeDay: 0,
+  drag: null,
+  menu: null
+};
+
+// ═══ DOM + toast + loader ═════════════════════════════════════════
+const $  = id => document.getElementById(id);
+const qa = sel => document.querySelectorAll(sel);
+const LO = $('loader'), TO = $('toast');
+let toTO = null;
+function toast(m, err){
+  TO.textContent = m;
+  TO.classList.toggle('err', !!err);
+  TO.classList.add('on');
+  clearTimeout(toTO);
+  toTO = setTimeout(()=>TO.classList.remove('on'), 3500);
+}
+const showL = ()=>LO.classList.add('on');
+const hideL = ()=>LO.classList.remove('on');
+
+// ═══ Tempo & formati ══════════════════════════════════════════════
+function getMonday(d){
+  const x = new Date(d || Date.now());
+  x.setHours(0,0,0,0);
+  x.setDate(x.getDate() - (x.getDay() || 7) + 1);
+  return x;
+}
+// YYYY-MM-DD dalla data locale (niente toISOString: l'UTC sfasa il giorno)
+function toYMD(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+function hFromISO(iso){
+  return iso ? (new Date(iso).getTime() - S.weekStart.getTime()) / 3600000 : null;
+}
+function isoFromH(h){
+  return h == null ? null : new Date(S.weekStart.getTime() + h*3600000).toISOString();
+}
+function nowH(){ return (Date.now() - S.weekStart.getTime()) / 3600000; }
+function fmtH(h){
+  const H = Math.floor(h), M = Math.round((h-H)*60);
+  return H <= 0 ? M+"'" : H+'h '+String(M).padStart(2,'0')+"'";
+}
+function fmtDT(h){
+  const d = Math.floor(h/24);
+  const hh = Math.floor(h - d*24), mm = Math.round((h - d*24 - hh) * 60);
+  return `${DAYS_SHORT[((d%7)+7)%7]} ${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+}
+function fmtDate(d){ return `${d.getDate()} ${MESI[d.getMonth()]} ${d.getFullYear()}`; }
+function fmtClock(d){
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+}
+function isoWeek(d){
+  const t = new Date(d);
+  t.setHours(0,0,0,0);
+  t.setDate(t.getDate() + 3 - (t.getDay()+6)%7);
+  const w1 = new Date(t.getFullYear(),0,4);
+  const week = 1 + Math.round(((t - w1)/86400000 - 3 + (w1.getDay()+6)%7)/7);
+  return {week, year: t.getFullYear()};
+}
+
+// ═══ Helpers dati ═════════════════════════════════════════════════
+function ctById(id){ return S.cartellini.find(x => x.id == id); }
+function pianFor(ctId, idx){
+  return S.pianificazioni.filter(p => p.cartellino_id == ctId && p.segnatura_idx === idx);
+}
+function nomeOf(ct){
+  if(!ct) return '?';
+  return (ct.commessa || '?') + (ct.numCommessa ? ' '+ct.numCommessa : '');
+}
+function cartaOf(ct){ return (ct && ct.tipopiega) || 'V7'; }
+function copieOf(ct, p){
+  if(p && p.split_copie) return p.split_copie;
+  return (ct && ct.tiraturaRich) || 0;
+}
+function cph(carta, fmt){
+  if(carta === 'V7') return fmt >= 48 ? 22000 : 40000;
+  return fmt >= 48 ? 25000 : 35000;
+}
+function durKba(carta, fmt, copie){
+  if(!copie || !fmt) return 1.5;
+  return 1.5 + copie / cph(carta, fmt);
+}
+function colOf(ct){
+  const c = ct && ct.commessa ? ct.commessa.toLowerCase() : '';
+  for(const [k,v] of COLOR_MAP) if(c.includes(k)) return v;
+  // hash fallback deterministico
+  let h = 0;
+  for(const ch of c) h = (h*31 + ch.charCodeAt(0)) >>> 0;
+  return PALETTE_KEYS[h % PALETTE_KEYS.length];
+}
+
+// ═══ Supabase I/O — headers sempre espliciti ══════════════════════
+function hdrs(extra){
+  const h = {
+    'apikey': SB.KEY,
+    'Authorization': 'Bearer ' + SB.KEY,
+    'Content-Type': 'application/json'
+  };
+  if(extra) Object.keys(extra).forEach(k => h[k] = extra[k]);
+  return h;
+}
+
+async function sbGet(path){
+  const r = await fetch(SB.URL + '/rest/v1/' + path, {headers: hdrs()});
+  if(!r.ok) throw new Error('GET '+path+' — HTTP '+r.status+' '+(await r.text()));
+  return r.json();
+}
+async function sbInsert(table, row){
+  const r = await fetch(SB.URL + '/rest/v1/' + table, {
+    method: 'POST',
+    headers: hdrs({'Prefer':'return=representation'}),
+    body: JSON.stringify([row])
+  });
+  if(!r.ok) throw new Error('INSERT '+table+' — HTTP '+r.status+' '+(await r.text()));
+  const rows = await r.json();
+  return rows[0];
+}
+async function sbUpdate(table, idVal, patch){
+  const r = await fetch(SB.URL + '/rest/v1/' + table + '?id=eq.' + idVal, {
+    method: 'PATCH',
+    headers: hdrs({'Prefer':'return=minimal'}),
+    body: JSON.stringify(patch)
+  });
+  if(!r.ok) throw new Error('UPDATE '+table+' — HTTP '+r.status+' '+(await r.text()));
+}
+async function sbDelete(table, idVal){
+  const r = await fetch(SB.URL + '/rest/v1/' + table + '?id=eq.' + idVal, {
+    method: 'DELETE',
+    headers: hdrs()
+  });
+  if(!r.ok) throw new Error('DELETE '+table+' — HTTP '+r.status+' '+(await r.text()));
+}
+
+// ═══ Caricamento / salvataggio ════════════════════════════════════
+async function loadAll(){
+  try{
+    showL();
+    const weekStartYMD = toYMD(S.weekStart);
+    const weekEndYMD   = toYMD(new Date(S.weekStart.getTime() + 7*86400000));
+    const [cts, pians, acts, tch] = await Promise.all([
+      sbGet('cartellini?select=id,cliente,commessa,num_commessa,tipo_piega,allestimento,tiratura_rich,foliazione_tot,segnature&order=id.desc'),
+      sbGet('progr_cartellini?select=*'),
+      sbGet('prod_active?select=*'),
+      sbGet('progr_turni_chiusi?select=*&giorno=gte.' + weekStartYMD + '&giorno=lt.' + weekEndYMD)
+    ]);
+    S.cartellini = (cts||[]).map(r => ({
+      id: r.id, cliente: r.cliente, commessa: r.commessa, numCommessa: r.num_commessa,
+      tipopiega: r.tipo_piega, allestimento: r.allestimento,
+      tiraturaRich: r.tiratura_rich, foliazioneTot: r.foliazione_tot,
+      segnature: r.segnature || []
+    }));
+    S.pianificazioni = pians || [];
+    S.prodActive = {kba1:null, kba2:null};
+    (acts||[]).forEach(r => { S.prodActive[r.id] = r.data; });
+    S.turniChiusi = tch || [];
+    $('lv-u').textContent = 'aggiornato ' + fmtClock(new Date());
+    renderAll();
+  }catch(e){
+    console.error('loadAll:', e);
+    toast('Errore caricamento: '+e.message, true);
+  }finally{
+    hideL();
+  }
+}
+
+async function refreshLive(){
+  try{
+    const weekStartYMD = toYMD(S.weekStart);
+    const weekEndYMD   = toYMD(new Date(S.weekStart.getTime() + 7*86400000));
+    const [pians, acts, tch] = await Promise.all([
+      sbGet('progr_cartellini?select=id,prod_stato,prod_giri_fatti,prod_operatore,kba_start'),
+      sbGet('prod_active?select=*'),
+      sbGet('progr_turni_chiusi?select=*&giorno=gte.' + weekStartYMD + '&giorno=lt.' + weekEndYMD)
+    ]);
+    // merge pianif prod_* e kba_start (può essere cambiato dalla cascade)
+    const mp = {};
+    (pians||[]).forEach(p => { mp[p.id] = p; });
+    S.pianificazioni.forEach(p => {
+      const u = mp[p.id];
+      if(u){
+        p.prod_stato = u.prod_stato;
+        p.prod_giri_fatti = u.prod_giri_fatti;
+        p.prod_operatore = u.prod_operatore;
+      }
+    });
+    S.prodActive = {kba1:null, kba2:null};
+    (acts||[]).forEach(r => { S.prodActive[r.id] = r.data; });
+    S.turniChiusi = tch || [];
+    // cascade per fermi: può modificare kba_start in DB
+    await applyCascadeFermi();
+    $('lv-u').textContent = 'aggiornato ' + fmtClock(new Date());
+    renderFasi();
+    renderLive();
+  }catch(e){/* silent */}
+}
+
+async function createPianif(p){
+  try{
+    const row = await sbInsert('progr_cartellini', {
+      cartellino_id: p.cartellino_id,
+      segnatura_idx: p.segnatura_idx,
+      af_start:  p.af_start  || null,
+      inc_start: p.inc_start || null,
+      kba_lane:  p.kba_lane  || null,
+      kba_start: p.kba_start || null,
+      split_copie:   p.split_copie   || null,
+      split_from_id: p.split_from_id || null
+    });
+    return row;
+  }catch(e){
+    console.error('createPianif:', e, p);
+    toast('Errore pianificazione: '+e.message, true);
+    return null;
+  }
+}
+async function updatePianif(p, patch){
+  try{
+    Object.keys(patch).forEach(k => { p[k] = patch[k]; });
+    await sbUpdate('progr_cartellini', p.id, patch);
+  }catch(e){
+    console.error('updatePianif:', e, p, patch);
+    toast('Errore salvataggio: '+e.message, true);
+    await loadAll();
+  }
+}
+async function deletePianif(id){
+  try{
+    await sbDelete('progr_cartellini', id);
+  }catch(e){
+    console.error('deletePianif:', e);
+    toast('Errore eliminazione: '+e.message, true);
+  }
+}
+
+// ═══ Turni chiusi ═════════════════════════════════════════════════
+// Range di ore (assolute dal lunedì 00:00) del turno `t` nel giorno `d`
+// - I:   dayBase+7  → dayBase+15
+// - II:  dayBase+15 → dayBase+23
+// - III: dayBase+23 → dayBase+31 (= 7:00 del giorno dopo)
+function turnoRange(dayIdx, turno){
+  const base = dayIdx * 24;
+  if(turno === 'I')   return [base+7,  base+15];
+  if(turno === 'II')  return [base+15, base+23];
+  /* III */           return [base+23, base+31];
+}
+function giornoFromDate(iso){
+  // iso è YYYY-MM-DD: parse come data LOCALE (niente Z), così
+  // Date.getTime() è mezzanotte locale, coerente con S.weekStart
+  const parts = String(iso).split('-').map(Number);
+  const dt = new Date(parts[0], parts[1]-1, parts[2]);
+  return Math.round((dt.getTime() - S.weekStart.getTime()) / 86400000);
+}
+function isTurnoChiuso(dayIdx, turno){
+  return S.turniChiusi.some(x => giornoFromDate(x.giorno) === dayIdx && x.turno === turno);
+}
+function turniChiusiRanges(){
+  // array di [start, end] in ore assolute della settimana corrente
+  const out = [];
+  S.turniChiusi.forEach(x => {
+    const d = giornoFromDate(x.giorno);
+    if(d < -1 || d >= DAY_COUNT) return;
+    out.push(turnoRange(d, x.turno));
+  });
+  return out;
+}
+// Se l'ora h cade dentro un turno chiuso, ritorna la fine del turno (fuori dalla chiusura).
+// Usato nei drop per evitare che l'utente piazzi stampa dentro turno chiuso.
+function shiftIfInClosed(h){
+  for(const [s,e] of turniChiusiRanges()){
+    if(h >= s && h < e) return e;
+  }
+  return h;
+}
+
+// ═══ Fermi macchina (da prod_active.data) ═════════════════════════
+function fermiOreDi(p){
+  if(!p.kba_lane) return 0;
+  const act = S.prodActive['kba' + p.kba_lane];
+  if(!act) return 0;
+  if(act.commessaId != p.cartellino_id) return 0;
+  if(act.segnId != p.segnatura_idx + 1) return 0;
+  let sec = (act.fermiSec || act.fermi_sec || 0);
+  // Se fermo in corso, aggiungo tempo corrente
+  if(act.stato === 'fermo' && act.oraFermoInizio){
+    sec += (Date.now() - act.oraFermoInizio) / 1000;
+  }
+  return Math.max(0, sec / 3600);
+}
+
+// ═══ Cascade automatica per fermi ═════════════════════════════════
+// Scorre ogni KBA lane in ordine temporale: se una pianificazione
+// (estesa dai suoi fermi) sfora sulla successiva, sposta la successiva
+// in avanti. Salva in DB solo se il nuovo start differisce di almeno 1 minuto.
+async function applyCascadeFermi(){
+  for(const lane of [1, 2]){
+    const lista = S.pianificazioni
+      .filter(p => p.kba_lane === lane && p.kba_start &&
+                   p.prod_stato !== 'completato' && p.prod_stato !== 'annullato')
+      .sort((a, b) => hFromISO(a.kba_start) - hFromISO(b.kba_start));
+    let prevEnd = null;
+    for(const p of lista){
+      const ct = ctById(p.cartellino_id);
+      if(!ct) continue;
+      const seg = (ct.segnature || [])[p.segnatura_idx];
+      if(!seg) continue;
+      const copie = p.split_copie || ct.tiraturaRich || 0;
+      const durTot = durKba(cartaOf(ct), seg.fol, copie) + fermiOreDi(p);
+      let start = hFromISO(p.kba_start);
+      // 1) non può iniziare prima della fine del precedente
+      if(prevEnd !== null && start < prevEnd) start = prevEnd;
+      // 2) non può iniziare dentro un turno chiuso
+      start = shiftIfInClosed(start);
+      // se cambiato di ≥1 minuto, salva in DB
+      const origStart = hFromISO(p.kba_start);
+      const deltaMin = (start - origStart) * 60;
+      if(deltaMin >= 1){
+        const newISO = isoFromH(start);
+        try{
+          await sbUpdate('progr_cartellini', p.id, {kba_start: newISO});
+          p.kba_start = newISO;
+        }catch(e){ console.warn('cascade save failed', e); }
+      }
+      prevEnd = start + durTot;
+    }
+  }
+}
+
+
+function buildBasket(){
+  const out = [];
+  // 1) segnature di cartellini senza pianificazione (attiva o completata)
+  S.cartellini.forEach(ct => {
+    (ct.segnature || []).forEach((seg, idx) => {
+      if(!seg || !seg.fol) return;
+      const pians = pianFor(ct.id, idx).filter(p => !p.split_from_id);
+      // Se esiste una pianificazione con stato completato → già stampata, nascondi
+      // Se esiste una pianificazione con una fase piazzata → già in planning, nascondi
+      const gestita = pians.some(p =>
+        p.prod_stato === 'completato' ||
+        p.af_start || p.inc_start || p.kba_start
+      );
+      if(!gestita) out.push({type:'segnatura', ct, seg, idx});
+    });
+  });
+  // 2) riprese non piazzate
+  S.pianificazioni.forEach(p => {
+    if(!p.split_from_id) return;
+    if(p.af_start || p.inc_start || p.kba_start) return;
+    if(p.prod_stato === 'completato' || p.prod_stato === 'annullato') return;
+    const ct = ctById(p.cartellino_id);
+    if(!ct) return;
+    const seg = (ct.segnature||[])[p.segnatura_idx];
+    if(!seg) return;
+    out.push({type:'ripresa', ct, seg, idx:p.segnatura_idx, pianif:p});
+  });
+  return out;
+}
+
+// ═══ Warnings vincolo temporale ═══════════════════════════════════
+function annotaWarnings(p){
+  p._wAf = false; p._wInc = false; p._wKba = false;
+  const af = hFromISO(p.af_start), inc = hFromISO(p.inc_start), kba = hFromISO(p.kba_start);
+  if(af!=null && inc!=null && af + DUR_AF > inc){ p._wAf = true; p._wInc = true; }
+  if(inc!=null && kba!=null && inc + DUR_INC > kba){ p._wInc = true; p._wKba = true; }
+}
+
+// ═══ Render ═══════════════════════════════════════════════════════
+function renderHero(){
+  const ws = S.weekStart, we = new Date(ws.getTime()+6*86400000);
+  const iw = isoWeek(ws);
+  $('hero-wk').textContent = `Settimana ${iw.week} · ${iw.year}`;
+  $('hero-rg').textContent = `${fmtDate(ws)} – ${fmtDate(we)}`;
+}
+function renderDayPills(){
+  const dp = $('daypills'); dp.innerHTML = '';
+  for(let i=0; i<DAY_COUNT; i++){
+    const d = new Date(S.weekStart.getTime() + i*86400000);
+    const el = document.createElement('div');
+    el.className = 'dp' + (i===S.activeDay ? ' act' : '');
+    const n = S.pianificazioni.filter(p => {
+      if(!p.kba_start) return false;
+      return Math.floor(hFromISO(p.kba_start)/24) === i;
+    }).length;
+    el.innerHTML = `<div class="dp-l">${DAYS_SHORT[i].toUpperCase()} ${d.getDate()}</div>
+                    <div class="dp-n">${n} ${n===1?'lavoro':'lavori'}</div>`;
+    el.onclick = ()=>{ $('tlbody').scrollTop = i*24*PX_H - 10; };
+    dp.appendChild(el);
+  }
+}
+function updateActivePill(){
+  qa('#daypills .dp').forEach((el,i)=>el.classList.toggle('act', i===S.activeDay));
+}
+
+function setHeights(){
+  ['hcol','scol'].forEach(id => { const el=$(id); if(el) el.style.height = TOT_H+'px'; });
+  qa('.col.tk').forEach(el => el.style.height = TOT_H+'px');
+}
+function renderStatic(){
+  // hours
+  const hcol = $('hcol'); hcol.innerHTML = '';
+  for(let d=0; d<DAY_COUNT; d++) for(let h=0; h<24; h++){
+    const l = document.createElement('div');
+    l.className = 'lbl';
+    l.style.top = ((d*24+h)*PX_H)+'px';
+    l.textContent = String(h).padStart(2,'0');
+    hcol.appendChild(l);
+  }
+  // turni (colonna shifts) con data-day e data-turno per context menu
+  const scol = $('scol'); scol.innerHTML = '';
+  for(let d=0; d<DAY_COUNT; d++){
+    const db = d*24;
+    // La fascia 0-7 appartiene al turno III del giorno PRECEDENTE (d-1)
+    // Quindi chiudere cliccando lì significa chiudere III di d-1.
+    const bands = [
+      {tu:'III', refDay:d-1, h0:0,  dur:7, l:(d===0?'':'III')},
+      {tu:'I',   refDay:d,   h0:7,  dur:8, l:'I'},
+      {tu:'II',  refDay:d,   h0:15, dur:8, l:'II'},
+      {tu:'III', refDay:d,   h0:23, dur:1, l:''}
+    ];
+    bands.forEach(b => {
+      const el = document.createElement('div');
+      const chiuso = b.refDay >= 0 && isTurnoChiuso(b.refDay, b.tu);
+      el.className = 'sh-band sh-'+b.tu + (chiuso?' closed':'');
+      el.style.top = ((db+b.h0)*PX_H)+'px';
+      el.style.height = (b.dur*PX_H)+'px';
+      el.textContent = b.l;
+      if(b.refDay >= 0){
+        el.dataset.day = b.refDay;
+        el.dataset.turno = b.tu;
+        el.addEventListener('contextmenu', e=>{
+          e.preventDefault();
+          showMenuTurno(e.clientX, e.clientY, b.refDay, b.tu);
+        });
+      }
+      scol.appendChild(el);
+    });
+  }
+  // confini turno su tracce
+  qa('.col.tk').forEach(tk => {
+    [...tk.querySelectorAll('.shift-b')].forEach(b => b.remove());
+    [...tk.querySelectorAll('.slot-closed')].forEach(b => b.remove());
+    for(let d=0; d<DAY_COUNT; d++) [7,15,23].forEach(h => {
+      const b = document.createElement('div');
+      b.className = 'shift-b';
+      b.style.top = ((d*24+h)*PX_H)+'px';
+      tk.appendChild(b);
+    });
+    // overlay per ogni range chiuso
+    turniChiusiRanges().forEach(rg => {
+      const [s, e] = rg;
+      if(e <= 0 || s >= DAY_COUNT*24) return;
+      const cs = Math.max(0, s), ce = Math.min(DAY_COUNT*24, e);
+      const ov = document.createElement('div');
+      ov.className = 'slot-closed';
+      ov.style.top = (cs*PX_H)+'px';
+      ov.style.height = ((ce-cs)*PX_H)+'px';
+      tk.appendChild(ov);
+    });
+  });
+  // day banner
+  const body = $('tlbody');
+  [...body.querySelectorAll('.daysep,.daychip')].forEach(e => e.remove());
+  for(let d=1; d<DAY_COUNT; d++){
+    const sep = document.createElement('div');
+    sep.className = 'daysep';
+    sep.style.top = (d*24*PX_H)+'px';
+    body.appendChild(sep);
+  }
+  for(let d=0; d<DAY_COUNT; d++){
+    const dt = new Date(S.weekStart.getTime() + d*86400000);
+    const chip = document.createElement('div');
+    chip.className = 'daychip';
+    chip.style.top = (d*24*PX_H)+'px';
+    chip.textContent = `${DAYS_FULL[d]} ${dt.getDate()} ${MESI[dt.getMonth()]}`;
+    body.appendChild(chip);
+  }
+}
+
+function renderBasket(){
+  const lst = $('blist'); lst.innerHTML = '';
+  buildBasket().forEach(it => {
+    const {ct, seg, idx, pianif, type} = it;
+    const carta = cartaOf(ct), fmt = seg.fol;
+    const copie = pianif ? (pianif.split_copie || ct.tiraturaRich) : (ct.tiraturaRich||0);
+    const p = PALETTE[colOf(ct)];
+    const dur = durKba(carta, fmt, copie);
+    const el = document.createElement('div');
+    el.className = 'bkc' + (type==='ripresa' ? ' ripresa' : '');
+    el.draggable = true;
+    el.style.borderLeftColor = p.bd;
+    const tag = type==='ripresa' ? '<span class="tag">RIPRESA</span>' : '';
+    el.innerHTML = `
+      <div class="tt">${tag}${nomeOf(ct)}</div>
+      <div class="mm">s${idx+1} · ${fmt}° · ${carta}</div>
+      <div class="dd"><span>${(copie||0).toLocaleString('it')} cp</span><b>${fmtH(dur)}</b></div>`;
+    el.addEventListener('dragstart', e => {
+      S.drag = type==='ripresa'
+        ? {kind:'basket_rip', pianifId: pianif.id}
+        : {kind:'basket_seg', cartellino_id: ct.id, segnatura_idx: idx};
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain','1');
+      setTimeout(()=>el.classList.add('dg'), 0);
+    });
+    el.addEventListener('dragend', ()=>{ el.classList.remove('dg'); S.drag = null; });
+    lst.appendChild(el);
+  });
+}
+
+function renderFasi(){
+  qa('.col.tk').forEach(tk => [...tk.querySelectorAll('.fase')].forEach(b => b.remove()));
+  const now = nowH();
+  S.pianificazioni.forEach(p => {
+    if(p.prod_stato === 'completato' || p.prod_stato === 'annullato') return;
+    const ct = ctById(p.cartellino_id);
+    if(!ct) return;
+    const seg = (ct.segnature||[])[p.segnatura_idx];
+    if(!seg) return;
+    annotaWarnings(p);
+    const carta = cartaOf(ct), fmt = seg.fol;
+    const copie = p.split_copie || ct.tiraturaRich || 0;
+    const pal = PALETTE[colOf(ct)];
+    const nome = nomeOf(ct);
+    if(p.af_start){
+      const h = hFromISO(p.af_start);
+      if(h > -DUR_AF && h < DAY_COUNT*24) addFase(p, 'af', h, DUR_AF, nome, pal, p._wAf, false);
+    }
+    if(p.inc_start){
+      const h = hFromISO(p.inc_start);
+      if(h > -DUR_INC && h < DAY_COUNT*24) addFase(p, 'inc', h, DUR_INC, `s${p.segnatura_idx+1} · ${fmt}°`, pal, p._wInc, false);
+    }
+    if(p.kba_start && p.kba_lane){
+      const h = hFromISO(p.kba_start);
+      const d = durKba(carta, fmt, copie);
+      if(h > -d && h < DAY_COUNT*24) addFaseBig(p, h, d, nome, pal, p._wKba, now, ct, seg, carta, fmt, copie);
+    }
+  });
+}
+
+function addFase(p, tipo, start, dur, label, pal, warn, big){
+  const tk = document.querySelector('.col.tk[data-tipo="'+tipo+'"]');
+  if(!tk) return;
+  const b = document.createElement('div');
+  b.className = 'fase small' + (warn?' warn':'');
+  b.draggable = true;
+  b.dataset.pianif = p.id;
+  b.dataset.tipo = tipo;
+  b.style.top = (start*PX_H)+'px';
+  b.style.height = (dur*PX_H)+'px';
+  b.style.background = pal.bg;
+  b.style.borderColor = pal.bd;
+  b.style.color = pal.fg;
+  b.textContent = label;
+  attachFaseDrag(b, p.id, tipo);
+  tk.appendChild(b);
+}
+
+function addFaseBig(p, start, durTeor, nome, pal, warn, now, ct, seg, carta, fmt, copie){
+  const tk = document.querySelector('.col.tk[data-lane="'+p.kba_lane+'"]');
+  if(!tk) return;
+  const fermiOre = fermiOreDi(p);
+  const durTot = durTeor + fermiOre;
+  const b = document.createElement('div');
+  b.className = 'fase big' + (warn?' warn':'');
+  b.draggable = true;
+  b.dataset.pianif = p.id;
+  b.dataset.tipo = 'kba';
+  b.style.top = (start*PX_H)+'px';
+  b.style.height = (durTot*PX_H)+'px';
+  b.style.borderColor = pal.bd;
+  b.style.color = pal.fg;
+  if(fermiOre > 0){
+    // gradient sfumato: colore base finché durTeor, poi rosso crescente
+    const frac = Math.round((durTeor / durTot) * 100);
+    b.style.background =
+      `linear-gradient(to bottom, ${pal.bg} 0%, ${pal.bg} ${frac}%, #FEE2E2 ${frac}%, #FCA5A5 100%)`;
+  } else {
+    b.style.background = pal.bg;
+  }
+  // progresso: cerca match in prod_active
+  let prog = 0, giri = 0;
+  const act = S.prodActive['kba'+p.kba_lane];
+  if(act && act.commessaId == p.cartellino_id && act.segnId == p.segnatura_idx+1){
+    giri = act.avanz || 0;
+    if(copie > 0) prog = Math.min(100, giri*100/copie);
+  } else if(p.prod_giri_fatti && copie){
+    giri = p.prod_giri_fatti;
+    prog = Math.min(100, giri*100/copie);
+  } else if(now >= start){
+    prog = Math.min(100, Math.max(0, (now-start)/durTeor*100));
+  }
+  const rip = p.split_from_id ? '<div class="ripresa-ico">ripresa</div>' : '';
+  const fermiLbl = fermiOre > 0 ? ` <span style="color:#991B1B">+${fmtH(fermiOre)} fermo</span>` : '';
+  // Progress bar: larghezza del contenitore limitata alla parte teorica,
+  // così non si allunga visivamente per effetto dei fermi.
+  const pbContainerW = durTot > durTeor ? (durTeor / durTot) * 100 : 100;
+  b.innerHTML = `${rip}
+    <div class="tt">${nome}</div>
+    <div class="mm">s${p.segnatura_idx+1} · ${fmt}° · ${carta}</div>
+    <div class="mm">${copie.toLocaleString('it')} cp · ${fmtH(durTeor)}${fermiLbl}</div>
+    ${prog>0 && prog<100 ? `<div class="pb" style="background:${pal.base};width:${pbContainerW}%"><div style="height:100%;width:${prog}%;background:${pal.fill}"></div></div>` : ''}`;
+  b.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    showMenu(e.clientX, e.clientY, p.id);
+  });
+  attachFaseDrag(b, p.id, 'kba');
+  tk.appendChild(b);
+}
+
+function attachFaseDrag(b, pianifId, tipo){
+  b.addEventListener('dragstart', e => {
+    S.drag = {kind:'fase', pianifId, tipo};
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(pianifId));
+    setTimeout(()=>b.classList.add('dg'), 0);
+  });
+  b.addEventListener('dragend', ()=>{ b.classList.remove('dg'); S.drag = null; });
+}
+
+function renderNow(){
+  const h = nowH();
+  const nl = $('nl'), nll = $('nll');
+  if(h < 0 || h > DAY_COUNT*24){
+    nl.style.display = 'none'; nll.style.display = 'none';
+  } else {
+    nl.style.display = ''; nll.style.display = '';
+    nl.style.top = (h*PX_H)+'px';
+    nll.style.top = (h*PX_H)+'px';
+    nll.textContent = fmtDT(h);
+  }
+}
+
+// "In produzione ora" legge direttamente da prod_active
+function renderLive(){
+  const out = $('live-grid'); out.innerHTML = '';
+  [1,2].forEach(lane => {
+    const act = S.prodActive['kba'+lane];
+    const card = document.createElement('div');
+    card.className = 'lvc';
+    if(!act){
+      card.classList.add('idle');
+      card.innerHTML = `
+        <div class="lvch"><span class="lvcl">KBA ${lane}</span><span class="lvcs off">● idle</span></div>
+        <div class="lvcn" style="color:#8A8B85">—</div>
+        <div class="lvcm">nessun lavoro in corso</div>`;
+      out.appendChild(card);
+      return;
+    }
+    const fase = act.fase || 'stampa';
+    const stato = act.stato;
+    const inFermo = stato === 'fermo';
+    const inPausa = fase === 'pausa';
+    let lbl = 'in stampa', cls = 'on';
+    if(inFermo){ lbl = 'fermo'; cls = 'fermo'; }
+    else if(inPausa){ lbl = 'pausa'; cls = 'off'; }
+    else if(fase === 'avviamento'){ lbl = 'avviamento'; cls = 'on'; }
+    const ct = ctById(act.commessaId);
+    const pal = ct ? PALETTE[colOf(ct)] : PALETTE.blue;
+    const title = act.commessaTitle || (ct ? nomeOf(ct) : '—');
+    const sub = [act.segnNome, act.segnPag].filter(Boolean).join(' · ');
+    const target = act.target || 0, avanz = act.avanz || 0;
+    const perc = target > 0 ? Math.min(100, avanz*100/target) : 0;
+    card.innerHTML = `
+      <div class="lvch"><span class="lvcl">KBA ${lane}</span><span class="lvcs ${cls}">● ${lbl}</span></div>
+      <div class="lvcn">${title}</div>
+      <div class="lvcm">${sub || 'segnatura —'}</div>
+      <div class="lvcp" style="background:${pal.base}"><div style="height:100%;width:${perc}%;background:${pal.fill}"></div></div>
+      <div class="lvcf"><span>${avanz.toLocaleString('it')} copie</span><span>${Math.round(perc)}%${target?' di '+target.toLocaleString('it'):''}</span></div>`;
+    out.appendChild(card);
+  });
+}
+
+function renderAll(){
+  renderHero(); renderDayPills(); renderStatic();
+  renderBasket(); renderFasi(); renderNow(); renderLive();
+}
+
+// ═══ Drop logic ═══════════════════════════════════════════════════
+function dropHour(tk, clientY){
+  const r = tk.getBoundingClientRect();
+  let h = (clientY - r.top) / PX_H;
+  h = Math.round(h*4) / 4;
+  return Math.max(0, Math.min(DAY_COUNT*24 - 0.25, h));
+}
+function defaultTimes(tkKind, hour){
+  let kba, inc, af;
+  if(tkKind === 'kba'){
+    // Se droppato dentro un turno chiuso, sposta la kba dopo la chiusura
+    hour = shiftIfInClosed(hour);
+    kba = hour; inc = hour - 1; af = hour - 1.5;
+  }
+  else if(tkKind === 'inc'){ inc = hour; af = hour - 0.5; kba = hour + 1; }
+  else { af = hour; inc = hour + 0.5; kba = hour + 1.5; }
+  // Sposta kba avanti anche negli altri casi se cade in chiusura
+  if(tkKind !== 'kba') kba = shiftIfInClosed(kba);
+  af  = Math.max(0, af);
+  inc = Math.max(DUR_AF, inc);
+  kba = Math.max(DUR_AF + DUR_INC, kba);
+  return {af_start: isoFromH(af), inc_start: isoFromH(inc), kba_start: isoFromH(kba)};
+}
+
+async function dropBasketSeg(d, tkKind, tkLane, hour){
+  const t = defaultTimes(tkKind, hour);
+  const row = await createPianif({
+    cartellino_id: d.cartellino_id,
+    segnatura_idx: d.segnatura_idx,
+    af_start: t.af_start, inc_start: t.inc_start,
+    kba_start: t.kba_start, kba_lane: tkLane || 1
+  });
+  if(row) S.pianificazioni.push(row);
+  renderAll();
+}
+async function dropBasketRip(d, tkKind, tkLane, hour){
+  const p = S.pianificazioni.find(x => x.id === d.pianifId);
+  if(!p) return;
+  const t = defaultTimes(tkKind, hour);
+  await updatePianif(p, {af_start:t.af_start, inc_start:t.inc_start, kba_start:t.kba_start, kba_lane:tkLane||1});
+  renderAll();
+}
+async function dropFase(d, tkKind, tkLane, hour){
+  const p = S.pianificazioni.find(x => x.id === d.pianifId);
+  if(!p) return;
+  const patch = {};
+  if(d.tipo === 'af')  patch.af_start  = isoFromH(hour);
+  if(d.tipo === 'inc') patch.inc_start = isoFromH(hour);
+  if(d.tipo === 'kba'){
+    hour = shiftIfInClosed(hour);  // evita turno chiuso
+    patch.kba_start = isoFromH(hour);
+    if(tkLane) patch.kba_lane = tkLane;
+  }
+  await updatePianif(p, patch);
+  renderAll();
+}
+
+qa('.col.tk').forEach(tk => {
+  const kind = tk.dataset.lane ? 'kba' : tk.dataset.tipo;
+  const lane = tk.dataset.lane ? parseInt(tk.dataset.lane) : null;
+  tk.addEventListener('dragover', e => {
+    if(!S.drag) return;
+    if(S.drag.kind === 'fase'){
+      const compat = (kind==='kba' && S.drag.tipo==='kba') || (kind === S.drag.tipo);
+      if(!compat) return;
+    }
+    e.preventDefault();
+    tk.classList.add('ov');
+    e.dataTransfer.dropEffect = 'move';
+  });
+  tk.addEventListener('dragleave', ()=>tk.classList.remove('ov'));
+  tk.addEventListener('drop', e => {
+    tk.classList.remove('ov');
+    if(!S.drag) return;
+    const hour = dropHour(tk, e.clientY);
+    const d = S.drag; S.drag = null;
+    if(d.kind === 'basket_seg'){ e.preventDefault(); dropBasketSeg(d, kind, lane, hour); }
+    else if(d.kind === 'basket_rip'){ e.preventDefault(); dropBasketRip(d, kind, lane, hour); }
+    else if(d.kind === 'fase'){
+      const compat = (kind==='kba' && d.tipo==='kba') || (kind === d.tipo);
+      if(!compat) return;
+      e.preventDefault();
+      dropFase(d, kind, lane, hour);
+    }
+  });
+});
+
+// drag nel basket = rimetti in coda
+const bkEl = $('basket');
+bkEl.addEventListener('dragover', e => {
+  if(!S.drag || S.drag.kind !== 'fase') return;
+  e.preventDefault();
+  bkEl.classList.add('ov');
+});
+bkEl.addEventListener('dragleave', ()=>bkEl.classList.remove('ov'));
+bkEl.addEventListener('drop', async e => {
+  bkEl.classList.remove('ov');
+  if(!S.drag || S.drag.kind !== 'fase') return;
+  e.preventDefault();
+  const id = S.drag.pianifId; S.drag = null;
+  await returnToBasket(id);
+});
+
+async function returnToBasket(pianifId){
+  const p = S.pianificazioni.find(x => x.id === pianifId);
+  if(!p) return;
+  if(p.split_from_id){
+    // ripresa: azzera le fasi, il record resta
+    await updatePianif(p, {af_start:null, inc_start:null, kba_start:null, kba_lane:null});
+  } else {
+    // pianificazione normale: elimina (la segnatura torna nel basket derivato)
+    S.pianificazioni = S.pianificazioni.filter(x => x.id !== pianifId);
+    await deletePianif(pianifId);
+  }
+  renderAll();
+}
+
+// ═══ Context menu ═════════════════════════════════════════════════
+function hideMenu(){ if(S.menu){ S.menu.remove(); S.menu = null; } }
+function showMenu(cx, cy, pianifId){
+  hideMenu();
+  const m = document.createElement('div');
+  m.className = 'cm';
+  m.style.top = (cy + window.scrollY) + 'px';
+  m.style.left = Math.min(cx + window.scrollX, window.innerWidth - 220) + 'px';
+  m.innerHTML = `
+    <div class="hd">Cartellino KBA</div>
+    <button data-a="split">✂ Dividi produzione…</button>
+    <button data-a="basket">↩ Rimetti tutto nel basket</button>`;
+  m.addEventListener('click', e => {
+    const a = e.target.closest('[data-a]') && e.target.closest('[data-a]').dataset.a;
+    if(a === 'split')  doSplit(pianifId);
+    if(a === 'basket') returnToBasket(pianifId);
+    hideMenu();
+  });
+  document.body.appendChild(m);
+  S.menu = m;
+}
+document.addEventListener('click', e => {
+  if(S.menu && !S.menu.contains(e.target)) hideMenu();
+});
+
+async function doSplit(pianifId){
+  const p = S.pianificazioni.find(x => x.id === pianifId);
+  if(!p || !p.kba_start) return;
+  const ct = ctById(p.cartellino_id);
+  if(!ct) return;
+  const seg = (ct.segnature||[])[p.segnatura_idx];
+  if(!seg) return;
+  const carta = cartaOf(ct), fmt = seg.fol;
+  const copieOrig = p.split_copie || ct.tiraturaRich || 0;
+  const s = hFromISO(p.kba_start), d = durKba(carta, fmt, copieOrig);
+  const now = nowH();
+  const prod = p.prod_giri_fatti || 0;
+  let guess = prod > 0 ? prod
+    : (now >= s && now < s+d ? Math.round(copieOrig * ((now - s - 1.5)/(d - 1.5))) : Math.round(copieOrig * 0.5));
+  guess = Math.max(1, Math.min(copieOrig - 1, guess));
+  const input = prompt(
+    `Dividi segnatura ${p.segnatura_idx+1} di "${nomeOf(ct)}"\n\nCopie totali: ${copieOrig.toLocaleString('it')}\nCopie già stampate?`,
+    String(guess));
+  if(input === null) return;
+  const fatte = parseInt(input.replace(/\./g,''), 10);
+  if(isNaN(fatte) || fatte <= 0 || fatte >= copieOrig){ toast('Numero copie non valido', true); return; }
+  const rimaste = copieOrig - fatte;
+  await updatePianif(p, {split_copie: fatte});
+  const ripresa = await createPianif({
+    cartellino_id: p.cartellino_id,
+    segnatura_idx: p.segnatura_idx,
+    af_start: null, inc_start: null, kba_start: null, kba_lane: null,
+    split_copie: rimaste,
+    split_from_id: p.id
+  });
+  if(ripresa){
+    S.pianificazioni.push(ripresa);
+    toast('Produzione divisa · ripresa nel basket');
+  }
+  renderAll();
+}
+
+// ═══ Menu turni (chiudi/riapri) ═══════════════════════════════════
+function showMenuTurno(cx, cy, dayIdx, turno){
+  hideMenu();
+  const chiuso = isTurnoChiuso(dayIdx, turno);
+  const data = new Date(S.weekStart.getTime() + dayIdx*86400000);
+  const etich = `${DAYS_SHORT[dayIdx]} ${data.getDate()} ${MESI[data.getMonth()]}`;
+  const m = document.createElement('div');
+  m.className = 'cm';
+  m.style.top  = (cy + window.scrollY) + 'px';
+  m.style.left = Math.min(cx + window.scrollX, window.innerWidth - 240) + 'px';
+  m.innerHTML = `
+    <div class="hd">${turno} turno · ${etich}</div>
+    ${chiuso
+      ? '<button data-a="riapri">↻ Riapri turno</button>'
+      : '<button data-a="chiudi">✕ Chiudi turno</button>'}`;
+  m.addEventListener('click', e=>{
+    const a = e.target.closest('[data-a]') && e.target.closest('[data-a]').dataset.a;
+    if(a === 'chiudi') doChiudiTurno(dayIdx, turno);
+    if(a === 'riapri') doRiapriTurno(dayIdx, turno);
+    hideMenu();
+  });
+  document.body.appendChild(m);
+  S.menu = m;
+}
+
+async function doChiudiTurno(dayIdx, turno){
+  const [rgS, rgE] = turnoRange(dayIdx, turno);
+  // data del giorno in YMD LOCALE (evita shift timezone di toISOString)
+  const giorno = toYMD(new Date(S.weekStart.getTime() + dayIdx*86400000));
+  // 1) split/sposta pianificazioni KBA che intersecano il range
+  const lanes = S.pianificazioni.filter(p => p.kba_start && p.kba_lane);
+  for(const p of lanes){
+    const ct = ctById(p.cartellino_id);
+    if(!ct) continue;
+    const seg = (ct.segnature || [])[p.segnatura_idx];
+    if(!seg) continue;
+    const copie = p.split_copie || ct.tiraturaRich || 0;
+    const s = hFromISO(p.kba_start);
+    const d = durKba(cartaOf(ct), seg.fol, copie);
+    const e = s + d;
+    if(e <= rgS || s >= rgE) continue; // fuori range → nessuna azione
+    if(s < rgS && e > rgS){
+      // Caso A: attraversa l'inizio della chiusura → SPLIT a rgS
+      // copie fatte fino a rgS: se rgS è dentro l'avvio, 0; altrimenti proporzionale
+      let fatte;
+      if(rgS <= s + 1.5){
+        fatte = 0;
+      } else {
+        const oreStampa = rgS - s - 1.5;
+        fatte = Math.round(oreStampa * cph(cartaOf(ct), seg.fol));
+      }
+      fatte = Math.max(0, Math.min(copie - 1, fatte));
+      const rimaste = copie - fatte;
+      if(fatte > 0){
+        await updatePianif(p, {split_copie: fatte});
+      } else {
+        // nessuna copia fatta: meglio spostare tutto dopo rgE
+        await updatePianif(p, {kba_start: isoFromH(rgE)});
+        continue;
+      }
+      await createPianif({
+        cartellino_id: p.cartellino_id,
+        segnatura_idx: p.segnatura_idx,
+        af_start: null, inc_start: null, kba_start: null, kba_lane: null,
+        split_copie: rimaste,
+        split_from_id: p.id
+      }).then(r => { if(r) S.pianificazioni.push(r); });
+    } else {
+      // Caso B/C: inizia dentro o dopo rgS ma overlappa → sposta tutto a rgE
+      await updatePianif(p, {kba_start: isoFromH(rgE)});
+    }
+  }
+  // 2) inserisco la chiusura (dopo, così se fallisce non ho già splittato inutilmente)
+  try{
+    await sbInsert('progr_turni_chiusi', {giorno, turno, motivo: null});
+  }catch(e){
+    // UNIQUE violation → probabilmente già chiuso, ignoro
+    console.warn('chiusura già esistente', e);
+  }
+  await loadAll();
+  toast(`${turno} turno chiuso`);
+}
+
+async function doRiapriTurno(dayIdx, turno){
+  const giorno = toYMD(new Date(S.weekStart.getTime() + dayIdx*86400000));
+  const row = S.turniChiusi.find(x => giornoFromDate(x.giorno) === dayIdx && x.turno === turno);
+  if(!row) return;
+  try{
+    await sbDelete('progr_turni_chiusi', row.id);
+    S.turniChiusi = S.turniChiusi.filter(x => x.id !== row.id);
+    renderAll();
+    toast(`${turno} turno riaperto`);
+  }catch(e){
+    console.error('riapri turno', e);
+    toast('Errore riapertura: '+e.message, true);
+  }
+}
+
+// ═══ Scroll → day pill sync ═══════════════════════════════════════
+const tlbody = $('tlbody');
+let rafPending = false;
+tlbody.addEventListener('scroll', () => {
+  if(rafPending) return;
+  rafPending = true;
+  requestAnimationFrame(() => {
+    rafPending = false;
+    const center = tlbody.scrollTop + tlbody.clientHeight/2;
+    const day = Math.max(0, Math.min(DAY_COUNT-1, Math.floor(center/(24*PX_H))));
+    if(day !== S.activeDay){ S.activeDay = day; updateActivePill(); }
+  });
+});
+
+// ═══ Navigazione settimana ════════════════════════════════════════
+$('btn-prev').onclick  = ()=>{ S.weekStart = new Date(S.weekStart.getTime() - 7*86400000); loadAll(); };
+$('btn-next').onclick  = ()=>{ S.weekStart = new Date(S.weekStart.getTime() + 7*86400000); loadAll(); };
+$('btn-today').onclick = ()=>{
+  S.weekStart = getMonday();
+  loadAll().then(()=>{ tlbody.scrollTop = Math.max(0, nowH()*PX_H - 180); });
+};
+
+// ═══ Orologio + polling live ══════════════════════════════════════
+function tickClock(){ $('tb-clock').textContent = fmtClock(new Date()); }
+setInterval(tickClock, 1000);
+// tick frequente: rirenderizza fasi (così box con fermo in corso crescono)
+//                 + aggiorna NOW line
+setInterval(()=>{
+  renderNow();
+  // Rerender fasi solo se c'è almeno una KBA in fermo, per evitare spam
+  const fermoInCorso = Object.values(S.prodActive).some(a => a && a.stato === 'fermo');
+  if(fermoInCorso) renderFasi();
+}, 5000);
+setInterval(refreshLive, POLL_MS);
+
+// ═══ Init ═════════════════════════════════════════════════════════
+S.weekStart = getMonday();
+setHeights();
+tickClock();
+renderHero();
+loadAll().then(()=>{
+  setTimeout(()=>{ tlbody.scrollTop = Math.max(0, nowH()*PX_H - 180); }, 100);
+});
+
+})();
+</script>
+</body>
+</html>
