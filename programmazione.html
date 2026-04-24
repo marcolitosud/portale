@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Programmazione stampa · Effe Printing</title>
+
+<script>
+// ═══ GUARD SESSIONE ═══
+// Accesso consentito solo dal portale (chiave 'progr_stampa', 90 giorni)
+(function(){
+  try{
+    var raw = localStorage.getItem('ep_sess3_progr_stampa');
+    if(!raw){ window.location.replace('portale.html'); return; }
+    var sess = JSON.parse(raw);
+    var oreMax = 90*24*60*60*1000;
+    if(!sess || !sess.ts || Date.now() - sess.ts >= oreMax){
+      window.location.replace('portale.html');
+    }
+  }catch(e){
+    window.location.replace('portale.html');
+  }
+})();
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="common.css">
+
+<style>
+body{background:#FAFAF5;color:#0E1117;font-family:'DM Sans',sans-serif}
+
+/* ─── Topbar ─── */
+.topbar{background:#0E1C36;color:#FAFAF5;display:flex;align-items:center;padding:10px 18px;gap:14px;position:sticky;top:0;z-index:30}
+.tb-brand{background:#1E3A5F;color:#FAFAF5;font-weight:500;font-size:11px;padding:4px 8px;border-radius:4px;letter-spacing:.5px}
+.tb-title{font-size:15px;font-weight:500;flex:1;display:flex;align-items:center;gap:8px}
+.tb-title .sdot{background:#10B981}
+.tb-clock{font-family:'DM Mono',monospace;font-size:13px;opacity:.8}
+.tb-back{background:transparent;border:0.5px solid rgba(250,250,245,.25);color:#FAFAF5;font-size:12px;padding:4px 10px;border-radius:6px;cursor:pointer;text-decoration:none}
+.tb-back:hover{background:rgba(255,255,255,.08)}
+
+/* ─── Hero settimana ─── */
+.hero{background:#1E3A5F;color:#FAFAF5;padding:14px 18px;display:flex;justify-content:space-between;align-items:center}
+.hero-wk{font-size:15px;font-weight:500}
+.hero-rg{font-size:12px;opacity:.75;margin-top:2px}
+.hero-nav{display:flex;align-items:center;gap:8px}
+.hero-nav button{background:rgba(255,255,255,.1);border:0.5px solid rgba(255,255,255,.15);color:#FAFAF5;width:30px;height:30px;border-radius:4px;cursor:pointer;font-size:14px;padding:0;font-family:inherit}
+.hero-nav button:hover{background:rgba(255,255,255,.18)}
+.hero-nav button.wide{width:auto;padding:0 12px;font-size:12px}
+
+/* ─── Day pills ─── */
+.daypills{display:flex;padding:10px 18px;gap:4px;background:#FFFFFF;border-bottom:0.5px solid #E0DED6}
+.dp{flex:1;text-align:center;padding:6px 4px;border-radius:6px;cursor:pointer;transition:background .15s;min-width:0}
+.dp.act{background:#E6F0FB}
+.dp.inact{opacity:.5}
+.dp-l{font-size:11px;color:#5F6570}
+.dp.act .dp-l{color:#1E3A5F;font-weight:500}
+.dp-n{font-size:10px;color:#8A8B85;margin-top:2px}
+.dp.act .dp-n{color:#1E3A5F}
+
+/* ─── Sezioni ─── */
+.sect{background:#FFFFFF;padding:10px 18px;border-bottom:0.5px solid #E0DED6}
+.sh{font-size:10px;color:#5F6570;margin-bottom:6px;letter-spacing:.5px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.sh-r{font-family:'DM Mono',monospace;text-transform:none;letter-spacing:0;color:#8A8B85;font-size:10px}
+
+/* ─── Basket ─── */
+.basket{transition:background .15s}
+.basket.ov{background:#E6F0FB}
+.bkr{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;min-height:64px}
+.bkr::-webkit-scrollbar{height:4px}
+.bkr::-webkit-scrollbar-thumb{background:#D4D3CC;border-radius:2px}
+.bkr:empty::after{content:'Nessun cartellino in coda';color:#8A8B85;font-size:11px;font-style:italic;padding:20px;width:100%;text-align:center;text-transform:none;letter-spacing:0}
+.bkc{flex:0 0 auto;width:148px;background:#FFFFFF;border:0.5px solid #E0DED6;border-left-width:3px;border-radius:5px;padding:7px 9px;cursor:grab}
+.bkc:hover{border-color:#1E3A5F}
+.bkc.dg{opacity:.3}
+.bkc.ripresa{background:#FFFCF5}
+.bkc .tt{font-size:12px;font-weight:500;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bkc .tag{display:inline-block;font-size:9px;padding:0 4px;background:#FEF3C7;color:#92400E;border-radius:2px;margin-right:3px;font-weight:500;vertical-align:1px}
+.bkc .mm{font-size:10px;color:#5F6570;line-height:1.25;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bkc .dd{font-size:10px;margin-top:4px;padding-top:4px;border-top:0.5px solid #E0DED6;display:flex;justify-content:space-between}
+.bkc .dd b{font-weight:500}
+
+/* ─── Timeline ─── */
+.timeline{background:#FFFFFF;border-bottom:0.5px solid #E0DED6}
+.tl-h{padding:10px 18px 6px;font-size:13px;color:#5F6570;display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap}
+.tl-hint{font-size:10px;color:#8A8B85;font-family:'DM Mono',monospace}
+.tl-wrap{padding:0 18px 12px}
+.tl-hd{display:flex;gap:4px;padding:0 2px;border-bottom:0.5px solid #E0DED6;background:#FFFFFF;position:sticky;top:0;z-index:10}
+.tl-hd>div{padding:6px 4px;font-size:11px;color:#5F6570;text-align:center;flex-shrink:0}
+.tl-hd>div.mn{font-weight:500;color:#0E1117}
+.tl-body{display:flex;gap:4px;padding:0 2px;position:relative;max-height:calc(100vh - 340px);min-height:360px;overflow-y:auto;overflow-x:hidden}
+.tl-body::-webkit-scrollbar{width:10px}
+.tl-body::-webkit-scrollbar-thumb{background:#B4B3AC;border-radius:5px}
+.tl-body::-webkit-scrollbar-track{background:#F0EFE8}
+.col{flex-shrink:0;position:relative}
+.col.hours{width:32px;background:#FFFFFF}
+.col.hours .lbl{position:absolute;right:4px;font-size:10px;color:#5F6570;font-family:'DM Mono',monospace;line-height:1;padding-top:3px;font-weight:500}
+.col.shifts{width:22px}
+.col.shifts .sh-band{position:absolute;left:0;right:0;display:flex;align-items:flex-start;justify-content:center;padding-top:6px;font-size:9px;font-weight:500;letter-spacing:.5px}
+.col.shifts .sh-III{background:#EDE9FE;color:#6B21A8}
+.col.shifts .sh-I{background:#DBEAFE;color:#1E40AF}
+.col.shifts .sh-II{background:#FEF3C7;color:#92400E}
+.col.tk{min-width:0;background-color:#F5F3ED;background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 31.5px,rgba(14,28,54,.08) 31.5px,rgba(14,28,54,.08) 32px);border-radius:4px}
+.col.tk.af,.col.tk.inc{width:78px;flex-shrink:0}
+.col.tk.mn{background-color:#F0EFE8;flex:1}
+.col.tk.ov{background-color:#E6F0FB;outline:1.5px solid #1E3A5F}
+.col .shift-b{position:absolute;left:0;right:0;height:1px;background:rgba(14,28,54,.2);pointer-events:none;z-index:1}
+.daysep{position:absolute;left:0;right:0;height:2px;background:#0E1C36;pointer-events:none;z-index:2}
+.daychip{position:absolute;left:2px;top:0;background:#0E1C36;color:#FAFAF5;font-size:10px;font-weight:500;padding:2px 8px;border-radius:0 0 4px 0;z-index:4;letter-spacing:.5px;pointer-events:none;text-transform:uppercase}
+
+.fase{position:absolute;left:3px;right:3px;cursor:grab;user-select:none;overflow:hidden;border:0.5px solid;border-radius:4px;box-sizing:border-box;z-index:3}
+.fase.small{padding:2px 5px;font-size:9px;display:flex;align-items:center;white-space:nowrap;line-height:1.1}
+.fase.big{padding:4px 8px;display:flex;flex-direction:column;font-size:10px;border-radius:5px}
+.fase.dg{opacity:.3}
+.fase.warn{border:1.5px solid #EF4444;outline:1px solid rgba(239,68,68,.3)}
+.fase .tt{font-size:11px;font-weight:500;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fase .mm{font-size:9px;opacity:.85;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.pb{height:3px;border-radius:2px;margin-top:3px;overflow:hidden}
+.ripresa-ico{position:absolute;top:3px;right:4px;font-size:9px;font-weight:500;background:rgba(255,255,255,.7);padding:0 4px;border-radius:2px;z-index:4}
+.now{position:absolute;left:0;right:0;height:1px;background:#EF4444;pointer-events:none;z-index:6}
+.nowl{position:absolute;left:2px;background:#EF4444;color:white;font-size:9px;padding:1px 5px;border-radius:3px;font-weight:500;white-space:nowrap;z-index:7;pointer-events:none;font-family:'DM Mono',monospace;transform:translateY(-50%)}
+
+/* ─── Context menu ─── */
+.cm{position:absolute;background:#FFFFFF;border:0.5px solid #0E1C36;border-radius:6px;padding:4px;z-index:50;min-width:200px}
+.cm .hd{padding:4px 10px;font-size:10px;color:#8A8B85;letter-spacing:.5px;text-transform:uppercase;border-bottom:0.5px solid #E0DED6;margin-bottom:2px}
+.cm button{background:transparent;border:none;padding:7px 10px;width:100%;text-align:left;font-size:12px;color:#0E1117;border-radius:4px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px}
+.cm button:hover{background:#F5F3ED}
+
+/* ─── In produzione ora ─── */
+.live{background:#FAFAF5;padding:14px 18px 20px}
+.lv-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px}
+.lv-t{font-size:13px;font-weight:500}
+.lv-u{font-size:11px;color:#8A8B85;font-family:'DM Mono',monospace}
+.lv-g{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lvc{background:#FFFFFF;border:0.5px solid #E0DED6;border-radius:6px;padding:12px 14px}
+.lvc.idle{opacity:.6}
+.lvch{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.lvcl{font-size:11px;color:#5F6570}
+.lvcs{font-size:10px;font-weight:500}
+.lvcs.on{color:#10B981}
+.lvcs.off{color:#8A8B85}
+.lvcn{font-size:14px;font-weight:500;margin-bottom:6px;line-height:1.2}
+.lvcm{font-size:11px;color:#5F6570;margin-bottom:8px}
+.lvcp{height:4px;border-radius:2px;overflow:hidden}
+.lvcf{display:flex;justify-content:space-between;font-size:10px;color:#8A8B85;margin-top:6px}
+
+@media (max-width:640px){
+  .lv-g{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="tb-brand">EP</div>
+  <div class="tb-title">Programmazione stampa<span class="sdot" id="tb-sdot"></span></div>
+  <div class="tb-clock" id="tb-clock">--:--:--</div>
+  <a class="tb-back" href="index.html">← Portale</a>
+</div>
+
+<div class="hero">
+  <div>
+    <div class="hero-wk" id="hero-wk">Settimana —</div>
+    <div class="hero-rg" id="hero-rg">—</div>
+  </div>
+  <div class="hero-nav">
+    <button id="btn-prev" title="Settimana precedente">‹</button>
+    <button id="btn-today" class="wide">Oggi</button>
+    <button id="btn-next" title="Settimana successiva">›</button>
+    <button id="btn-demo" class="wide" style="margin-left:12px;display:none">⚙ Popola demo</button>
+  </div>
+</div>
+
+<div class="daypills" id="daypills"></div>
+
+<div class="sect basket" id="basket">
+  <div class="sh">
+    <span>Basket cartellini · trascina sulle colonne KBA</span>
+    <span class="sh-r">V7 ≥48p 22k · &lt;48p 40k · P5 ≥48p 25k · &lt;48p 35k · avvio 1h30'</span>
+  </div>
+  <div class="bkr" id="blist"></div>
+</div>
+
+<div class="timeline">
+  <div class="tl-h">
+    <span>Visione oraria · scorri per cambiare giorno</span>
+    <span class="tl-hint">fasi indipendenti · tasto destro su KBA per dividere</span>
+  </div>
+  <div class="tl-wrap">
+    <div class="tl-hd">
+      <div style="width:32px"></div>
+      <div style="width:22px"></div>
+      <div style="width:78px">Arr. file</div>
+      <div style="width:78px">Incisione</div>
+      <div class="mn" style="flex:1;min-width:0">KBA 1</div>
+      <div class="mn" style="flex:1;min-width:0">KBA 2</div>
+    </div>
+    <div class="tl-body" id="tlbody">
+      <div class="col hours" id="hcol"></div>
+      <div class="col shifts" id="scol"></div>
+      <div class="col tk af" data-tipo="af"></div>
+      <div class="col tk inc" data-tipo="inc"></div>
+      <div class="col tk mn" data-lane="1"></div>
+      <div class="col tk mn" data-lane="2"></div>
+      <div class="now" id="nl"></div>
+      <div class="nowl" id="nll"></div>
+    </div>
+  </div>
+</div>
+
+<div class="live">
+  <div class="lv-h">
+    <span class="lv-t">In produzione ora</span>
+    <span class="lv-u" id="lv-u">aggiornato —</span>
+  </div>
+  <div class="lv-g" id="live-grid"></div>
+</div>
+
+<div class="loader" id="loader"></div>
+<div class="toast" id="toast"></div>
+
+<script src="sb.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* ─── Costanti ─────────────────────────── */
+const PALETTE = {
+  pink:  {bg:'#FBEAF0',fg:'#4B1528',bd:'#D4537E',fill:'#993556',base:'#F4C0D1'},
+  blue:  {bg:'#E6F1FB',fg:'#042C53',bd:'#378ADD',fill:'#185FA5',base:'#B5D4F4'},
+  purple:{bg:'#EEEDFE',fg:'#26215C',bd:'#7F77DD',fill:'#534AB7',base:'#CECBF6'},
+  teal:  {bg:'#E1F5EE',fg:'#04342C',bd:'#1D9E75',fill:'#0F6E56',base:'#9FE1CB'},
+  coral: {bg:'#FAECE7',fg:'#4A1B0C',bd:'#D85A30',fill:'#993C1D',base:'#F5C4B3'},
+  green: {bg:'#EAF3DE',fg:'#173404',bd:'#639922',fill:'#3B6D11',base:'#C0DD97'},
+  amber: {bg:'#FAEEDA',fg:'#412402',bd:'#EF9F27',fill:'#854F0B',base:'#FAC775'}
+};
+const DAYS_SHORT = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
+const DAYS_FULL  = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
+const MESI_SHORT = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+const DAY_COUNT   = 7;
+const PX_PER_HOUR = 32;
+const TOTAL_H     = DAY_COUNT * 24 * PX_PER_HOUR;
+const DUR_AF      = 0.5;
+const DUR_INC     = 1;
+const POLL_MS     = 10000;
+
+/* ─── State ─────────────────────────── */
+const state = {
+  weekStart: null,          // Date lun 00:00 ora locale
+  commesse:  [],            // caricate da progr_commesse
+  cartellini:[],            // caricati da v_progr_cartellini
+  activeDay: 0,
+  drag:      null,
+  menu:      null
+};
+
+/* ─── DOM shortcuts ─────────────────────────── */
+const $  = id => document.getElementById(id);
+const qa = sel => document.querySelectorAll(sel);
+const loader = $('loader');
+const toastEl = $('toast');
+let toastTO = null;
+
+function toast(msg, err){
+  toastEl.textContent = msg;
+  toastEl.classList.toggle('err', !!err);
+  toastEl.classList.add('on');
+  clearTimeout(toastTO);
+  toastTO = setTimeout(()=>toastEl.classList.remove('on'), 3000);
+}
+function showLoader(){ loader.classList.add('on'); }
+function hideLoader(){ loader.classList.remove('on'); }
+
+/* ─── Helpers temporali ─────────────────────────── */
+function getMonday(d){
+  const x = new Date(d || Date.now());
+  x.setHours(0,0,0,0);
+  const day = x.getDay() || 7;
+  x.setDate(x.getDate() - day + 1);
+  return x;
+}
+function hourAbsFromISO(iso){
+  if(!iso) return null;
+  return (new Date(iso).getTime() - state.weekStart.getTime()) / 3600000;
+}
+function isoFromHourAbs(h){
+  if(h == null) return null;
+  return new Date(state.weekStart.getTime() + h * 3600000).toISOString();
+}
+function nowHourAbs(){
+  return (Date.now() - state.weekStart.getTime()) / 3600000;
+}
+function fmtH(h){
+  const H = Math.floor(h), M = Math.round((h - H) * 60);
+  return H <= 0 ? M + "'" : H + 'h ' + String(M).padStart(2,'0') + "'";
+}
+function fmtDayTime(hAbs){
+  const d = Math.floor(hAbs / 24);
+  const h = hAbs - d * 24;
+  const hh = Math.floor(h), mm = Math.round((h - hh) * 60);
+  const dayIdx = ((d % 7) + 7) % 7;
+  return `${DAYS_SHORT[dayIdx]} ${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+}
+function fmtDateBrief(d){
+  return `${d.getDate()} ${MESI_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+}
+function fmtClock(d){
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+}
+
+/* ─── Helpers dati ─────────────────────────── */
+function cm(id){ return state.commesse.find(x=>x.id===id); }
+function colOf(c){ const co = cm(c.commessa_id); return PALETTE[(co && co.colore) || 'blue']; }
+function nomeOf(c){
+  const co = cm(c.commessa_id);
+  if(!co) return '?';
+  return co.uscita ? (co.testata + ' ' + co.uscita) : co.testata;
+}
+function cph(c){
+  if(c.carta === 'V7') return c.segnatura_fmt >= 48 ? 22000 : 40000;
+  return c.segnatura_fmt >= 48 ? 25000 : 35000;
+}
+function durKba(c){ return 1.5 + c.copie / cph(c); }
+
+/* ─── Supabase ─────────────────────────── */
+async function loadAll(){
+  try {
+    showLoader();
+    const [cs, cts] = await Promise.all([
+      SB.get('progr_commesse',      'select=*&order=testata'),
+      SB.get('v_progr_cartellini',  'select=*')
+    ]);
+    state.commesse = cs;
+    state.cartellini = cts;
+    $('btn-demo').style.display = cs.length === 0 ? '' : 'none';
+    renderAll();
+  } catch(e){
+    toast('Errore caricamento: ' + e.message, true);
+  } finally {
+    hideLoader();
+  }
+}
+
+async function refreshProd(){
+  try {
+    const cts = await SB.get('v_progr_cartellini',
+      'select=id,prod_stato,prod_giri_fatti,prod_start_effettivo,prod_end_effettivo,prod_operatore');
+    const map = {};
+    cts.forEach(x => map[x.id] = x);
+    state.cartellini.forEach(c => {
+      const u = map[c.id];
+      if(u){
+        c.prod_stato         = u.prod_stato;
+        c.prod_giri_fatti    = u.prod_giri_fatti;
+        c.prod_start_effettivo = u.prod_start_effettivo;
+        c.prod_end_effettivo   = u.prod_end_effettivo;
+        c.prod_operatore     = u.prod_operatore;
+      }
+    });
+    renderFasi();
+    renderLive();
+    $('lv-u').textContent = 'aggiornato ' + fmtClock(new Date());
+  } catch(e){ /* silent */ }
+}
+
+async function saveCartellino(c){
+  try {
+    await SB.upsert('progr_cartellini', {
+      id:              c.id,
+      commessa_id:     c.commessa_id,
+      segnatura_n:     c.segnatura_n,
+      segnatura_fmt:   c.segnatura_fmt,
+      copie:           c.copie,
+      carta:           c.carta,
+      colori:          c.colori || 4,
+      af_start:        c.af_start,
+      inc_start:       c.inc_start,
+      kba_lane:        c.kba_lane,
+      kba_start:       c.kba_start,
+      split_from_id:   c.split_from_id
+    }, 'id');
+  } catch(e){
+    toast('Errore salvataggio: ' + e.message, true);
+    await loadAll();
+  }
+}
+
+async function insertCartellino(c){
+  try {
+    const body = {
+      commessa_id:   c.commessa_id,
+      segnatura_n:   c.segnatura_n,
+      segnatura_fmt: c.segnatura_fmt,
+      copie:         c.copie,
+      carta:         c.carta,
+      colori:        c.colori || 4,
+      af_start:      c.af_start,
+      inc_start:     c.inc_start,
+      kba_lane:      c.kba_lane,
+      kba_start:     c.kba_start,
+      split_from_id: c.split_from_id
+    };
+    const r = await fetch(SB.URL + '/rest/v1/progr_cartellini',{
+      method:'POST',
+      headers: Object.assign({}, SB.H(), {'Prefer':'return=representation'}),
+      body: JSON.stringify([body])
+    });
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const [row] = await r.json();
+    // Rileggo la vista per avere i campi derivati
+    const [full] = await SB.get('v_progr_cartellini', 'id=eq.' + row.id);
+    return full;
+  } catch(e){
+    toast('Errore inserimento: ' + e.message, true);
+    await loadAll();
+    return null;
+  }
+}
+
+/* ─── Seed demo ─────────────────────────── */
+async function seedDemo(){
+  try {
+    showLoader();
+    const commesse = [
+      {id:'cf1_26',  testata:'Casa Facile', uscita:'1/26', cliente:'Mondadori', colore:'pink',  allestimento:'pm'},
+      {id:'u15',     testata:'U 15',        uscita:'del 15/1',                  colore:'blue'},
+      {id:'conf2',   testata:'Confidenze',  uscita:'2',                         colore:'purple'},
+      {id:'ven1973', testata:'Venerdì',     uscita:'1973',                      colore:'teal'},
+      {id:'dm3',     testata:'DM',          uscita:'3',                         colore:'coral'},
+      {id:'starb4',  testata:'Starbene',    uscita:'4',                         colore:'green'}
+    ];
+    await SB.upsert('progr_commesse', commesse, 'id');
+    const ws = state.weekStart.getTime();
+    const iso = h => new Date(ws + h * 3600000).toISOString();
+    const carts = [
+      // Piazzati lunedì
+      {commessa_id:'u15',     segnatura_n:1, segnatura_fmt:64, copie:22000, carta:'P5', af_start:iso(5),    inc_start:iso(5.5),  kba_lane:1, kba_start:iso(6.5)},
+      {commessa_id:'u15',     segnatura_n:2, segnatura_fmt:64, copie:22000, carta:'P5', af_start:iso(10.5), inc_start:iso(11),   kba_lane:1, kba_start:iso(12)},
+      {commessa_id:'cf1_26',  segnatura_n:3, segnatura_fmt:80, copie:16500, carta:'V7', af_start:iso(6.5),  inc_start:iso(7),    kba_lane:2, kba_start:iso(8)},
+      {commessa_id:'cf1_26',  segnatura_n:4, segnatura_fmt:80, copie:16500, carta:'V7', af_start:iso(11),   inc_start:iso(11.5), kba_lane:2, kba_start:iso(12.5)},
+      // Piazzati martedì (1 giorno = 24h)
+      {commessa_id:'ven1973', segnatura_n:2, segnatura_fmt:32, copie:18500, carta:'V7', af_start:iso(24+5.5),inc_start:iso(24+6),kba_lane:1, kba_start:iso(24+7)},
+      {commessa_id:'dm3',     segnatura_n:1, segnatura_fmt:48, copie:12000, carta:'P5', af_start:iso(24+8.5),inc_start:iso(24+9),kba_lane:2, kba_start:iso(24+10)},
+      // Basket (no kba_start)
+      {commessa_id:'conf2',   segnatura_n:1, segnatura_fmt:80, copie:14000, carta:'V7'},
+      {commessa_id:'starb4',  segnatura_n:2, segnatura_fmt:40, copie:11000, carta:'P5'},
+      {commessa_id:'ven1973', segnatura_n:3, segnatura_fmt:32, copie:18500, carta:'V7'}
+    ];
+    for(const c of carts) await insertCartellino(c);
+    await loadAll();
+    toast('Dati demo caricati');
+  } catch(e){
+    toast('Errore seed: ' + e.message, true);
+  } finally {
+    hideLoader();
+  }
+}
+
+/* ─── Render: hero + daypills ─────────────────────────── */
+function renderHero(){
+  const ws = state.weekStart;
+  const we = new Date(ws.getTime() + 6 * 86400000);
+  const isoWeek = getIsoWeek(ws);
+  $('hero-wk').textContent = `Settimana ${isoWeek.week} · ${isoWeek.year}`;
+  $('hero-rg').textContent = `${fmtDateBrief(ws)} – ${fmtDateBrief(we)}`;
+}
+function getIsoWeek(d){
+  const t = new Date(d);
+  t.setHours(0,0,0,0);
+  t.setDate(t.getDate() + 3 - (t.getDay()+6)%7);
+  const week1 = new Date(t.getFullYear(),0,4);
+  const week = 1 + Math.round(((t - week1)/86400000 - 3 + (week1.getDay()+6)%7)/7);
+  return {week, year: t.getFullYear()};
+}
+function renderDayPills(){
+  const dp = $('daypills');
+  dp.innerHTML = '';
+  for(let i=0; i<DAY_COUNT; i++){
+    const d = new Date(state.weekStart.getTime() + i*86400000);
+    const el = document.createElement('div');
+    el.className = 'dp' + (i===state.activeDay?' act':'');
+    const lavori = state.cartellini.filter(c=>{
+      if(!c.kba_start) return false;
+      const ha = hourAbsFromISO(c.kba_start);
+      return Math.floor(ha/24) === i;
+    }).length;
+    el.innerHTML = `<div class="dp-l">${DAYS_SHORT[i].toUpperCase()} ${d.getDate()}</div>
+                    <div class="dp-n">${lavori} ${lavori===1?'lavoro':'lavori'}</div>`;
+    el.onclick = ()=>{
+      $('tlbody').scrollTop = i * 24 * PX_PER_HOUR - 10;
+    };
+    dp.appendChild(el);
+  }
+}
+function updateActivePill(){
+  qa('#daypills .dp').forEach((el,i)=>el.classList.toggle('act', i===state.activeDay));
+}
+
+/* ─── Render: elementi statici timeline ─────────────────────────── */
+function setHeights(){
+  ['hcol','scol'].forEach(id=>{ const el=$(id); if(el) el.style.height = TOTAL_H + 'px'; });
+  qa('.col.tk').forEach(el=>el.style.height = TOTAL_H + 'px');
+}
+function renderStatic(){
+  const hcol = $('hcol'); hcol.innerHTML = '';
+  for(let d=0; d<DAY_COUNT; d++){
+    for(let h=0; h<24; h++){
+      const lbl = document.createElement('div');
+      lbl.className = 'lbl';
+      lbl.style.top = ((d*24+h) * PX_PER_HOUR) + 'px';
+      lbl.textContent = String(h).padStart(2,'0');
+      hcol.appendChild(lbl);
+    }
+  }
+  const scol = $('scol'); scol.innerHTML = '';
+  for(let d=0; d<DAY_COUNT; d++){
+    const db = d*24;
+    [{cls:'III',h0:0,dur:7,l:'III'},{cls:'I',h0:7,dur:8,l:'I'},
+     {cls:'II',h0:15,dur:8,l:'II'},{cls:'III',h0:23,dur:1,l:''}].forEach(b=>{
+      const el = document.createElement('div');
+      el.className = 'sh-band sh-' + b.cls;
+      el.style.top = ((db+b.h0)*PX_PER_HOUR) + 'px';
+      el.style.height = (b.dur*PX_PER_HOUR) + 'px';
+      el.textContent = b.l;
+      scol.appendChild(el);
+    });
+  }
+  qa('.col.tk').forEach(tk=>{
+    [...tk.querySelectorAll('.shift-b')].forEach(b=>b.remove());
+    for(let d=0; d<DAY_COUNT; d++){
+      [7,15,23].forEach(h=>{
+        const b = document.createElement('div');
+        b.className = 'shift-b';
+        b.style.top = ((d*24+h)*PX_PER_HOUR) + 'px';
+        tk.appendChild(b);
+      });
+    }
+  });
+  const body = $('tlbody');
+  [...body.querySelectorAll('.daysep,.daychip')].forEach(e=>e.remove());
+  for(let d=1; d<DAY_COUNT; d++){
+    const sep = document.createElement('div');
+    sep.className = 'daysep';
+    sep.style.top = (d*24*PX_PER_HOUR) + 'px';
+    body.appendChild(sep);
+  }
+  for(let d=0; d<DAY_COUNT; d++){
+    const date = new Date(state.weekStart.getTime() + d*86400000);
+    const chip = document.createElement('div');
+    chip.className = 'daychip';
+    chip.style.top = (d*24*PX_PER_HOUR) + 'px';
+    chip.textContent = `${DAYS_FULL[d]} ${date.getDate()} ${MESI_SHORT[date.getMonth()]}`;
+    body.appendChild(chip);
+  }
+}
+
+/* ─── Render: basket ─────────────────────────── */
+function renderBasket(){
+  const lst = $('blist'); lst.innerHTML = '';
+  const basket = state.cartellini.filter(c => !c.kba_start);
+  basket.forEach(c=>{
+    const p = colOf(c);
+    const d = durKba(c);
+    const el = document.createElement('div');
+    el.className = 'bkc' + (c.split_from_id ? ' ripresa' : '');
+    el.draggable = true;
+    el.style.borderLeftColor = p.bd;
+    const tag = c.split_from_id ? '<span class="tag">RIPRESA</span>' : '';
+    el.innerHTML = `
+      <div class="tt">${tag}${nomeOf(c)}</div>
+      <div class="mm">s${c.segnatura_n} · ${c.segnatura_fmt}° · ${c.carta}</div>
+      <div class="dd"><span>${c.copie.toLocaleString('it')} cp</span><b>${fmtH(d)}</b></div>`;
+    el.addEventListener('dragstart', e=>{
+      state.drag = {kind:'basket', cartId: c.id};
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(c.id));
+      setTimeout(()=>el.classList.add('dg'), 0);
+    });
+    el.addEventListener('dragend', ()=>{ el.classList.remove('dg'); state.drag = null; });
+    lst.appendChild(el);
+  });
+}
+
+/* ─── Render: fasi ─────────────────────────── */
+function validateWarnings(c){
+  c._warn_af = false; c._warn_inc = false; c._warn_kba = false;
+  const af = c.af_start ? hourAbsFromISO(c.af_start) : null;
+  const inc = c.inc_start ? hourAbsFromISO(c.inc_start) : null;
+  const kba = c.kba_start ? hourAbsFromISO(c.kba_start) : null;
+  if(af != null && inc != null && af + DUR_AF > inc){ c._warn_af = true; c._warn_inc = true; }
+  if(inc != null && kba != null && inc + DUR_INC > kba){ c._warn_inc = true; c._warn_kba = true; }
+}
+function renderFasi(){
+  qa('.col.tk').forEach(tk => [...tk.querySelectorAll('.fase')].forEach(b=>b.remove()));
+  const now = nowHourAbs();
+  state.cartellini.forEach(c=>{
+    validateWarnings(c);
+    const p = colOf(c);
+    if(c.af_start){
+      const h = hourAbsFromISO(c.af_start);
+      if(h > -DUR_AF && h < DAY_COUNT*24){
+        addFase(c, 'af', h, DUR_AF, nomeOf(c), p, c._warn_af, false);
+      }
+    }
+    if(c.inc_start){
+      const h = hourAbsFromISO(c.inc_start);
+      if(h > -DUR_INC && h < DAY_COUNT*24){
+        addFase(c, 'inc', h, DUR_INC, `s${c.segnatura_n} · ${c.segnatura_fmt}°`, p, c._warn_inc, false);
+      }
+    }
+    if(c.kba_start && c.kba_lane){
+      const h = hourAbsFromISO(c.kba_start);
+      const d = durKba(c);
+      if(h > -d && h < DAY_COUNT*24){
+        addFase(c, 'kba', h, d, null, p, c._warn_kba, true, now);
+      }
+    }
+  });
+}
+function addFase(c, tipo, start, dur, label, p, warn, big, now){
+  let tk;
+  if(tipo === 'kba') tk = document.querySelector('.col.tk[data-lane="'+c.kba_lane+'"]');
+  else tk = document.querySelector('.col.tk[data-tipo="'+tipo+'"]');
+  if(!tk) return;
+  const b = document.createElement('div');
+  b.className = 'fase ' + (big ? 'big' : 'small') + (warn ? ' warn' : '');
+  b.draggable = true;
+  b.dataset.cart = c.id;
+  b.dataset.tipo = tipo;
+  b.style.top = (start * PX_PER_HOUR) + 'px';
+  b.style.height = (dur * PX_PER_HOUR) + 'px';
+  b.style.background = p.bg;
+  b.style.borderColor = p.bd;
+  b.style.color = p.fg;
+  if(big){
+    const rip = c.split_from_id ? '<div class="ripresa-ico">ripresa</div>' : '';
+    let prog = 0;
+    if(c.prod_giri_fatti && c.copie) prog = Math.min(100, c.prod_giri_fatti * 100 / c.copie);
+    else if(now >= start) prog = Math.min(100, Math.max(0, (now - start) / dur * 100));
+    b.innerHTML = `${rip}
+      <div class="tt">${nomeOf(c)}</div>
+      <div class="mm">s${c.segnatura_n} · ${c.segnatura_fmt}° · ${c.carta}</div>
+      <div class="mm">${c.copie.toLocaleString('it')} cp · ${fmtH(dur)}</div>
+      ${prog>0 && prog<100 ? `<div class="pb" style="background:${p.base}"><div style="height:100%;width:${prog}%;background:${p.fill}"></div></div>` : ''}`;
+    b.addEventListener('contextmenu', e=>{
+      e.preventDefault();
+      showContextMenu(e.clientX, e.clientY, c.id);
+    });
+  } else {
+    b.textContent = label;
+  }
+  b.addEventListener('dragstart', e=>{
+    state.drag = {kind:'fase', cartId: c.id, tipo};
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(c.id));
+    setTimeout(()=>b.classList.add('dg'), 0);
+  });
+  b.addEventListener('dragend', ()=>{ b.classList.remove('dg'); state.drag = null; });
+  tk.appendChild(b);
+}
+
+/* ─── Render: NOW line ─────────────────────────── */
+function renderNow(){
+  const h = nowHourAbs();
+  const nl  = $('nl');
+  const nll = $('nll');
+  if(h < 0 || h > DAY_COUNT*24){
+    nl.style.display = 'none';
+    nll.style.display = 'none';
+  } else {
+    nl.style.display = '';
+    nll.style.display = '';
+    nl.style.top = (h * PX_PER_HOUR) + 'px';
+    nll.style.top = (h * PX_PER_HOUR) + 'px';
+    nll.textContent = fmtDayTime(h);
+  }
+}
+
+/* ─── Render: In produzione ora ─────────────────────────── */
+function renderLive(){
+  const out = $('live-grid'); out.innerHTML = '';
+  const now = nowHourAbs();
+  [1,2].forEach(lane=>{
+    const items = state.cartellini.filter(c=>{
+      if(c.kba_lane !== lane || !c.kba_start) return false;
+      const s = hourAbsFromISO(c.kba_start);
+      const e = s + durKba(c);
+      return now >= s && now < e;
+    }).sort((a,b)=>hourAbsFromISO(a.kba_start) - hourAbsFromISO(b.kba_start));
+    const card = document.createElement('div');
+    card.className = 'lvc';
+    if(items.length === 0){
+      card.classList.add('idle');
+      card.innerHTML = `
+        <div class="lvch"><span class="lvcl">KBA ${lane}</span><span class="lvcs off">● idle</span></div>
+        <div class="lvcn" style="color:#8A8B85">—</div>
+        <div class="lvcm">nessun lavoro in corso</div>`;
+    } else {
+      const c = items[0];
+      const p = colOf(c);
+      const s = hourAbsFromISO(c.kba_start);
+      const d = durKba(c);
+      let prog = 0, giri = 0;
+      if(c.prod_giri_fatti && c.copie){
+        giri = c.prod_giri_fatti;
+        prog = Math.min(100, giri * 100 / c.copie);
+      } else {
+        prog = Math.min(100, Math.max(0, (now - s) / d * 100));
+        giri = Math.round(c.copie * prog / 100);
+      }
+      const stato = c.prod_stato || 'in_stampa';
+      const onSt = stato === 'in_stampa';
+      card.innerHTML = `
+        <div class="lvch"><span class="lvcl">KBA ${lane}</span>
+          <span class="lvcs ${onSt?'on':'off'}">● ${stato.replace('_',' ')}</span></div>
+        <div class="lvcn">${nomeOf(c)} · s${c.segnatura_n} · ${c.segnatura_fmt}°${c.split_from_id?' · ripresa':''}</div>
+        <div class="lvcm">carta ${c.carta} · fine prev. ${fmtDayTime(s+d)}${c.prod_operatore?' · '+c.prod_operatore:''}</div>
+        <div class="lvcp" style="background:${p.base}"><div style="height:100%;width:${prog}%;background:${p.fill}"></div></div>
+        <div class="lvcf"><span>${giri.toLocaleString('it')} giri</span><span>${Math.round(prog)}% di ${c.copie.toLocaleString('it')}</span></div>`;
+    }
+    out.appendChild(card);
+  });
+}
+
+/* ─── Render all ─────────────────────────── */
+function renderAll(){
+  renderHero();
+  renderDayPills();
+  renderStatic();
+  renderBasket();
+  renderFasi();
+  renderNow();
+  renderLive();
+}
+
+/* ─── Drag & drop: drop su track ─────────────────────────── */
+function dropOnTrack(tk, clientY){
+  const rect = tk.getBoundingClientRect();
+  let hour = (clientY - rect.top) / PX_PER_HOUR;
+  hour = Math.round(hour * 4) / 4;   // snap 15'
+  hour = Math.max(0, Math.min(DAY_COUNT*24 - 0.25, hour));
+  return hour;
+}
+
+function commitDropBasket(cartId, tkKind, tkLane, hour){
+  const c = state.cartellini.find(x=>x.id===cartId);
+  if(!c) return;
+  let kbaStart, incStart, afStart;
+  if(tkKind === 'kba'){
+    kbaStart = hour; incStart = hour - 1; afStart = hour - 1.5;
+  } else if(tkKind === 'inc'){
+    incStart = hour; afStart = hour - 0.5; kbaStart = hour + 1;
+  } else {
+    afStart = hour; incStart = hour + 0.5; kbaStart = hour + 1.5;
+  }
+  afStart  = Math.max(0, afStart);
+  incStart = Math.max(DUR_AF, incStart);
+  kbaStart = Math.max(DUR_AF + DUR_INC, kbaStart);
+  c.af_start  = isoFromHourAbs(afStart);
+  c.inc_start = isoFromHourAbs(incStart);
+  c.kba_start = isoFromHourAbs(kbaStart);
+  c.kba_lane  = (tkLane || 1);
+  renderAll();
+  saveCartellino(c);
+}
+
+function commitDropFase(cartId, tipo, tkKind, tkLane, hour){
+  const c = state.cartellini.find(x=>x.id===cartId);
+  if(!c) return;
+  if(tipo === 'af')  c.af_start  = isoFromHourAbs(hour);
+  if(tipo === 'inc') c.inc_start = isoFromHourAbs(hour);
+  if(tipo === 'kba'){
+    c.kba_start = isoFromHourAbs(hour);
+    if(tkLane) c.kba_lane = tkLane;
+  }
+  renderAll();
+  saveCartellino(c);
+}
+
+qa('.col.tk').forEach(tk=>{
+  const tkKind = tk.dataset.lane ? 'kba' : tk.dataset.tipo;
+  const tkLane = tk.dataset.lane ? parseInt(tk.dataset.lane) : null;
+  tk.addEventListener('dragover', e=>{
+    if(!state.drag) return;
+    if(state.drag.kind === 'fase'){
+      const compat = (tkKind === 'kba' && state.drag.tipo === 'kba') || (tkKind === state.drag.tipo);
+      if(!compat) return;
+    }
+    e.preventDefault();
+    tk.classList.add('ov');
+    e.dataTransfer.dropEffect = 'move';
+  });
+  tk.addEventListener('dragleave', ()=>tk.classList.remove('ov'));
+  tk.addEventListener('drop', e=>{
+    tk.classList.remove('ov');
+    if(!state.drag) return;
+    const hour = dropOnTrack(tk, e.clientY);
+    if(state.drag.kind === 'basket'){
+      e.preventDefault();
+      commitDropBasket(state.drag.cartId, tkKind, tkLane, hour);
+    } else {
+      const compat = (tkKind === 'kba' && state.drag.tipo === 'kba') || (tkKind === state.drag.tipo);
+      if(!compat) return;
+      e.preventDefault();
+      commitDropFase(state.drag.cartId, state.drag.tipo, tkKind, tkLane, hour);
+    }
+    state.drag = null;
+  });
+});
+
+/* ─── Drag back to basket ─────────────────────────── */
+const basketEl = $('basket');
+basketEl.addEventListener('dragover', e=>{
+  if(!state.drag || state.drag.kind !== 'fase') return;
+  e.preventDefault();
+  basketEl.classList.add('ov');
+});
+basketEl.addEventListener('dragleave', ()=>basketEl.classList.remove('ov'));
+basketEl.addEventListener('drop', e=>{
+  basketEl.classList.remove('ov');
+  if(!state.drag || state.drag.kind !== 'fase') return;
+  e.preventDefault();
+  const c = state.cartellini.find(x=>x.id===state.drag.cartId);
+  if(!c) return;
+  c.af_start = null; c.inc_start = null;
+  c.kba_start = null; c.kba_lane = null;
+  renderAll();
+  saveCartellino(c);
+  state.drag = null;
+});
+
+/* ─── Context menu ─────────────────────────── */
+function hideMenu(){ if(state.menu){ state.menu.remove(); state.menu = null; } }
+function showContextMenu(clientX, clientY, cartId){
+  hideMenu();
+  const m = document.createElement('div');
+  m.className = 'cm';
+  m.style.top  = (clientY + window.scrollY) + 'px';
+  m.style.left = Math.min(clientX + window.scrollX, window.innerWidth - 220) + 'px';
+  m.innerHTML = `
+    <div class="hd">Cartellino KBA</div>
+    <button data-action="split">✂ Dividi produzione…</button>
+    <button data-action="basket">↩ Rimetti tutto nel basket</button>`;
+  m.addEventListener('click', e=>{
+    const act = e.target.closest('[data-action]')?.dataset.action;
+    if(act === 'split')   doSplit(cartId);
+    if(act === 'basket')  doReturnToBasket(cartId);
+    hideMenu();
+  });
+  document.body.appendChild(m);
+  state.menu = m;
+}
+document.addEventListener('click', e=>{
+  if(state.menu && !state.menu.contains(e.target)) hideMenu();
+});
+
+async function doReturnToBasket(cartId){
+  const c = state.cartellini.find(x=>x.id===cartId);
+  if(!c) return;
+  c.af_start = null; c.inc_start = null;
+  c.kba_start = null; c.kba_lane = null;
+  renderAll();
+  await saveCartellino(c);
+}
+
+async function doSplit(cartId){
+  const c = state.cartellini.find(x=>x.id===cartId);
+  if(!c || !c.kba_start) return;
+  const s = hourAbsFromISO(c.kba_start);
+  const d = durKba(c);
+  const now = nowHourAbs();
+  const prod = c.prod_giri_fatti || 0;
+  let guess;
+  if(prod > 0) guess = prod;
+  else if(now >= s && now < s + d) guess = Math.round(c.copie * ((now - s - 1.5) / (d - 1.5)));
+  else guess = Math.round(c.copie * 0.5);
+  guess = Math.max(1, Math.min(c.copie - 1, guess));
+  const input = prompt(
+    `Dividi "${nomeOf(c)} · s${c.segnatura_n}"\n\n` +
+    `Copie totali: ${c.copie.toLocaleString('it')}\n` +
+    `Copie già stampate?`, String(guess));
+  if(input === null) return;
+  const fatte = parseInt(input.replace(/\./g,''), 10);
+  if(isNaN(fatte) || fatte <= 0 || fatte >= c.copie){
+    toast('Numero copie non valido', true);
+    return;
+  }
+  const rimaste = c.copie - fatte;
+  c.copie = fatte;
+  await saveCartellino(c);
+  // Trova il prossimo segnatura_n libero per questa commessa
+  const used = state.cartellini
+    .filter(x => x.commessa_id === c.commessa_id)
+    .map(x => x.segnatura_n);
+  let nextSn = c.segnatura_n;
+  while(used.includes(nextSn)) nextSn++;
+  const ripresa = {
+    commessa_id: c.commessa_id,
+    segnatura_n: nextSn,
+    segnatura_fmt: c.segnatura_fmt,
+    copie: rimaste,
+    carta: c.carta,
+    colori: c.colori,
+    af_start: null, inc_start: null, kba_lane: null, kba_start: null,
+    split_from_id: c.id
+  };
+  const inserted = await insertCartellino(ripresa);
+  if(inserted) state.cartellini.push(inserted);
+  renderAll();
+  toast('Produzione divisa · ripresa nel basket');
+}
+
+/* ─── Scroll → day pill sync ─────────────────────────── */
+const tlbody = $('tlbody');
+let rafPending = false;
+tlbody.addEventListener('scroll', ()=>{
+  if(rafPending) return;
+  rafPending = true;
+  requestAnimationFrame(()=>{
+    rafPending = false;
+    const center = tlbody.scrollTop + tlbody.clientHeight/2;
+    const day = Math.max(0, Math.min(DAY_COUNT-1, Math.floor(center/(24*PX_PER_HOUR))));
+    if(day !== state.activeDay){
+      state.activeDay = day;
+      updateActivePill();
+    }
+  });
+});
+
+/* ─── Navigazione settimana ─────────────────────────── */
+$('btn-prev').onclick  = ()=>{ state.weekStart = new Date(state.weekStart.getTime() - 7*86400000); loadAll(); };
+$('btn-next').onclick  = ()=>{ state.weekStart = new Date(state.weekStart.getTime() + 7*86400000); loadAll(); };
+$('btn-today').onclick = ()=>{
+  state.weekStart = getMonday();
+  loadAll().then(()=>{
+    tlbody.scrollTop = Math.max(0, nowHourAbs() * PX_PER_HOUR - 180);
+  });
+};
+$('btn-demo').onclick = seedDemo;
+
+/* ─── Clock live + poll ─────────────────────────── */
+function tickClock(){ $('tb-clock').textContent = fmtClock(new Date()); }
+setInterval(tickClock, 1000);
+setInterval(()=>{ renderNow(); renderLive(); }, 30000); // NOW line ogni 30s
+setInterval(refreshProd, POLL_MS);                      // prod_* ogni 10s
+
+/* ─── Init ─────────────────────────── */
+state.weekStart = getMonday();
+setHeights();
+tickClock();
+renderHero();
+loadAll().then(()=>{
+  setTimeout(()=>{
+    tlbody.scrollTop = Math.max(0, nowHourAbs() * PX_PER_HOUR - 180);
+  }, 100);
+});
+
+})();
+</script>
+</body>
+</html>
