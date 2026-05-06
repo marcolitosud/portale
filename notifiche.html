@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<script>
+// ANTI-FLASH-AUTH-GUARD: redirect prima di disegnare UI se nessuna sessione del portale è valida.
+// Accetta QUALSIASI chiave ep_sess3_* (modulo) — basta essere loggati a uno qualunque dei moduli.
+(function(){
+  try{
+    var keys = Object.keys(localStorage).filter(function(k){return k.indexOf('ep_sess3_')===0;});
+    var ok = false;
+    var emailFound = null;
+    for(var i=0;i<keys.length;i++){
+      var raw = localStorage.getItem(keys[i]);
+      if(!raw) continue;
+      try{
+        var s = JSON.parse(raw);
+        if(s && s.ts && (Date.now()-s.ts) < 90*24*60*60*1000){
+          ok = true;
+          if(!emailFound && s.email) emailFound = s.email;
+        }
+      }catch(_){}
+    }
+    if(!ok){document.documentElement.style.display="none";window.location.replace("portale.html");return;}
+    // Salvo l'email in una chiave unificata che la pagina poi userà
+    if(emailFound) localStorage.setItem('ep_sess3_notifiche', JSON.stringify({email: emailFound, ts: Date.now()}));
+  }catch(e){document.documentElement.style.display="none";window.location.replace("portale.html");}
+})();
+</script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="theme-color" content="#1E3A5F"/>
+<title>Notifiche — Effe Printing</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="common.css"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --g:#1E3A5F;--g2:#2A4F7F;--g3:#3B82F6;--gs:#DBEAFE;
+  --ink:#0E1117;--ink2:#3D4250;--ink3:#8A8F9E;
+  --paper:#F7F6F2;--paper2:#EFEEE8;--paper3:#E0DED6;
+  --red:#B91C1C;--reds:#FEE2E2;--green:#15803D;--greens:#DCFCE7;
+}
+html,body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-height:100vh;-webkit-tap-highlight-color:transparent}
+header{background:var(--g);color:white;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px}
+.logo .ic{width:28px;height:28px;background:white;color:var(--g);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;font-family:var(--mono)}
+header .back{color:white;text-decoration:none;font-size:14px;opacity:.85}
+main{max-width:680px;margin:0 auto;padding:24px 20px 60px}
+h1{font-size:22px;font-weight:600;margin-bottom:6px}
+.lead{color:var(--ink3);font-size:14px;margin-bottom:24px;line-height:1.5}
+
+.card{background:white;border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04);border:1px solid var(--paper3)}
+.card h2{font-size:15px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card h2 .num{width:24px;height:24px;background:var(--gs);color:var(--g);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;font-family:var(--mono)}
+.card p{font-size:14px;color:var(--ink2);line-height:1.55;margin-bottom:10px}
+
+/* Master switch */
+.master{display:flex;align-items:center;justify-content:space-between;padding:8px 0}
+.master-label{font-size:15px;font-weight:500}
+.master-sub{font-size:13px;color:var(--ink3);margin-top:2px}
+
+/* iOS-style switch */
+.sw{position:relative;display:inline-block;width:48px;height:28px;flex:0 0 48px}
+.sw input{opacity:0;width:0;height:0}
+.sw .slider{position:absolute;cursor:pointer;inset:0;background:var(--paper3);border-radius:28px;transition:.2s}
+.sw .slider:before{content:"";position:absolute;height:22px;width:22px;left:3px;top:3px;background:white;border-radius:50%;transition:.2s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.sw input:checked + .slider{background:var(--g3)}
+.sw input:checked + .slider:before{transform:translateX(20px)}
+.sw input:disabled + .slider{opacity:.4;cursor:not-allowed}
+
+/* Eventi list */
+.evento{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--paper2)}
+.evento:first-child{border-top:none}
+.evento-info{flex:1;min-width:0;padding-right:12px}
+.evento-titolo{font-size:14px;font-weight:500}
+.evento-desc{font-size:12px;color:var(--ink3);margin-top:2px}
+
+/* Sezione QR */
+.qr-wrap{display:flex;flex-direction:column;align-items:center;gap:14px;padding:8px 0}
+#qr-canvas{background:white;padding:12px;border-radius:8px;border:1px solid var(--paper3)}
+.topic-display{font-family:var(--mono);font-size:13px;color:var(--ink2);background:var(--paper2);padding:8px 14px;border-radius:8px;word-break:break-all;text-align:center}
+.btn{display:inline-block;padding:11px 18px;background:var(--g);color:white;text-decoration:none;border-radius:10px;font-size:14px;font-weight:500;border:none;cursor:pointer;font-family:var(--sans)}
+.btn.secondary{background:white;color:var(--g);border:1.5px solid var(--g)}
+.btn:hover{opacity:.9}
+.btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:6px}
+
+/* Setup steps */
+.steps{counter-reset:s;padding-left:0;list-style:none}
+.steps li{counter-increment:s;position:relative;padding:10px 0 10px 36px;font-size:14px;color:var(--ink2);line-height:1.55}
+.steps li::before{content:counter(s);position:absolute;left:0;top:8px;width:24px;height:24px;background:var(--g);color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+.steps a{color:var(--g3);font-weight:500;text-decoration:none}
+.steps a:hover{text-decoration:underline}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:white;padding:10px 18px;border-radius:30px;font-size:13px;z-index:100;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+.toast.error{background:var(--red)}
+
+#name-row{display:flex;gap:10px;align-items:center;margin-top:8px}
+#display-name{flex:1;padding:10px 14px;border:1.5px solid var(--paper3);border-radius:8px;font-size:14px;font-family:var(--sans);outline:none}
+#display-name:focus{border-color:var(--g3);box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+
+.muted-when-off{transition:opacity .2s}
+.muted-when-off.off{opacity:.4;pointer-events:none}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><div class="ic">EP</div>Notifiche KBA</div>
+  <a href="portale.html" class="back">← Portale</a>
+</header>
+
+<main>
+  <h1>Notifiche stato KBA</h1>
+  <p class="lead">Ricevi sul telefono notifiche in tempo reale su quello che succede sulle macchine: inizio stampa, completamento, fermi e cambi turno.</p>
+
+  <!-- ─── Card 1: Master switch ───────────────────────────────── -->
+  <div class="card">
+    <h2><span class="num">1</span>Attiva le notifiche</h2>
+    <div class="master">
+      <div>
+        <div class="master-label">Ricevi notifiche</div>
+        <div class="master-sub">Master switch per il tuo account</div>
+      </div>
+      <label class="sw"><input type="checkbox" id="master-toggle"/><span class="slider"></span></label>
+    </div>
+    <div id="name-row" class="muted-when-off">
+      <input type="text" id="display-name" placeholder="Nome visualizzato (opzionale)" maxlength="40"/>
+      <button class="btn" id="save-name" style="padding:10px 14px;font-size:13px">Salva</button>
+    </div>
+  </div>
+
+  <!-- ─── Card 2: Eventi ───────────────────────────────── -->
+  <div class="card muted-when-off" id="eventi-card">
+    <h2><span class="num">2</span>Quali eventi ricevere</h2>
+    <p>Disattiva quelli che non ti interessano. Puoi cambiare in qualsiasi momento.</p>
+    <div id="eventi-list">
+      <div class="evento">
+        <div class="evento-info">
+          <div class="evento-titolo">Inizio stampa</div>
+          <div class="evento-desc">Quando una nuova segnatura entra in produzione</div>
+        </div>
+        <label class="sw"><input type="checkbox" data-evento="inizio_stampa"/><span class="slider"></span></label>
+      </div>
+      <div class="evento">
+        <div class="evento-info">
+          <div class="evento-titolo">Stampa completata</div>
+          <div class="evento-desc">Quando una segnatura termina</div>
+        </div>
+        <label class="sw"><input type="checkbox" data-evento="fine_stampa"/><span class="slider"></span></label>
+      </div>
+      <div class="evento">
+        <div class="evento-info">
+          <div class="evento-titolo">Fermo macchina</div>
+          <div class="evento-desc">Quando inizia un fermo (con motivo)</div>
+        </div>
+        <label class="sw"><input type="checkbox" data-evento="fermo_inizio"/><span class="slider"></span></label>
+      </div>
+      <div class="evento">
+        <div class="evento-info">
+          <div class="evento-titolo">Fermo concluso</div>
+          <div class="evento-desc">Quando il fermo finisce (con durata)</div>
+        </div>
+        <label class="sw"><input type="checkbox" data-evento="fermo_fine"/><span class="slider"></span></label>
+      </div>
+      <div class="evento">
+        <div class="evento-info">
+          <div class="evento-titolo">Cambio turno</div>
+          <div class="evento-desc">Avvio del I, II, III turno</div>
+        </div>
+        <label class="sw"><input type="checkbox" data-evento="cambio_turno"/><span class="slider"></span></label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Card 3: Setup app ───────────────────────────────── -->
+  <div class="card muted-when-off" id="setup-card">
+    <h2><span class="num">3</span>Configura il telefono</h2>
+    <p>Devi fare questi passi una volta sola, dal telefono su cui vuoi ricevere le notifiche.</p>
+    <ol class="steps">
+      <li>Installa l'app <strong>ntfy</strong>: <a href="https://apps.apple.com/app/ntfy/id1625396347" target="_blank">App Store</a> · <a href="https://play.google.com/store/apps/details?id=io.heckel.ntfy" target="_blank">Play Store</a></li>
+      <li>Apri l'app, tocca il <strong>+</strong> in basso a destra e scegli <strong>"Subscribe to topic"</strong>.</li>
+      <li>Inquadra il QR code qui sotto, oppure inserisci il topic a mano.</li>
+      <li>Fatto. Le notifiche arriveranno appena succede qualcosa.</li>
+    </ol>
+
+    <div class="qr-wrap">
+      <canvas id="qr-canvas"></canvas>
+      <div class="topic-display" id="topic-display">caricamento...</div>
+      <div class="btns">
+        <button class="btn secondary" id="copy-topic">Copia topic</button>
+        <button class="btn" id="test-notify">Invia test</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="sb.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// Bootstrap: leggo email dalla sessione, carico/creo riga subscribers
+// ═══════════════════════════════════════════════════════════════════
+const NTFY_SERVER = 'https://ntfy.sh';
+const EVENTI = ['inizio_stampa','fine_stampa','fermo_inizio','fermo_fine','cambio_turno'];
+
+let state = {
+  email: null,
+  row: null      // riga di ntfy_subscribers per questo utente
+};
+
+function toast(msg, isError){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.toggle('error', !!isError);
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+function genTopic(){
+  // Topic random non indovinabile: effe-kba-{8 char alfanumerici}
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let s = '';
+  for(let i=0;i<8;i++) s += chars[Math.floor(Math.random()*chars.length)];
+  return 'effe-kba-' + s;
+}
+
+function getEmail(){
+  // Prima prova: chiave unificata creata dall'auth-guard
+  try{
+    const s = JSON.parse(localStorage.getItem('ep_sess3_notifiche'));
+    if(s?.email) return s.email;
+  }catch(_){}
+  // Fallback: cerca in qualsiasi ep_sess3_* del portale
+  const keys = Object.keys(localStorage).filter(k => k.indexOf('ep_sess3_')===0);
+  for(const k of keys){
+    try{
+      const s = JSON.parse(localStorage.getItem(k));
+      if(s?.email && s?.ts && (Date.now()-s.ts) < 90*24*60*60*1000){
+        return s.email;
+      }
+    }catch(_){}
+  }
+  return null;
+}
+
+async function sbGet(path){
+  const r = await fetch(SB_URL + path, {headers: _sbH()});
+  if(!r.ok) throw new Error('GET '+path+' '+r.status);
+  return r.json();
+}
+async function sbInsert(table, row){
+  const r = await fetch(SB_URL+'/rest/v1/'+table, {
+    method:'POST',
+    headers: Object.assign({}, _sbH(), {'Content-Type':'application/json','Prefer':'return=representation'}),
+    body: JSON.stringify(row)
+  });
+  if(!r.ok) throw new Error('INSERT '+table+' '+r.status+': '+await r.text());
+  const arr = await r.json();
+  return arr[0];
+}
+async function sbUpdate(table, id, patch){
+  const r = await fetch(SB_URL+'/rest/v1/'+table+'?id=eq.'+id, {
+    method:'PATCH',
+    headers: Object.assign({}, _sbH(), {'Content-Type':'application/json','Prefer':'return=minimal'}),
+    body: JSON.stringify(patch)
+  });
+  if(!r.ok) throw new Error('UPDATE '+table+' '+r.status);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Carica o crea la riga subscribers per l'utente loggato
+// ═══════════════════════════════════════════════════════════════════
+async function loadOrCreate(){
+  state.email = getEmail();
+  if(!state.email){
+    document.querySelector('main').innerHTML = '<p style="padding:24px;text-align:center;color:var(--red)">Devi essere loggato. <a href="portale.html">Torna al portale</a></p>';
+    return;
+  }
+  try{
+    const rows = await sbGet('/rest/v1/ntfy_subscribers?user_email=eq.'+encodeURIComponent(state.email)+'&select=*');
+    if(rows && rows.length){
+      state.row = rows[0];
+    } else {
+      // Prima volta: creo la riga con un topic nuovo
+      state.row = await sbInsert('ntfy_subscribers', {
+        user_email: state.email,
+        topic:      genTopic(),
+        attivo:     false,                  // ← parte spento, l'utente lo accende
+        eventi:     EVENTI                  // tutti attivi di default
+      });
+    }
+    render();
+  }catch(e){
+    console.error(e);
+    toast('Errore caricamento: '+e.message, true);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Render UI con i dati della riga
+// ═══════════════════════════════════════════════════════════════════
+function render(){
+  if(!state.row) return;
+  // Master switch
+  document.getElementById('master-toggle').checked = !!state.row.attivo;
+  // Display name
+  document.getElementById('display-name').value = state.row.display_name || '';
+  // Eventi
+  document.querySelectorAll('input[data-evento]').forEach(cb => {
+    cb.checked = (state.row.eventi || []).includes(cb.dataset.evento);
+  });
+  // Topic + QR
+  document.getElementById('topic-display').textContent = state.row.topic;
+  drawQR(state.row.topic);
+  // Stato muted-when-off
+  applyMasterDim();
+}
+
+function applyMasterDim(){
+  const off = !state.row.attivo;
+  document.querySelectorAll('.muted-when-off').forEach(el => el.classList.toggle('off', off));
+}
+
+function drawQR(topic){
+  const url = NTFY_SERVER + '/' + topic;
+  const canvas = document.getElementById('qr-canvas');
+  QRCode.toCanvas(canvas, url, {width:180, margin:1, color:{dark:'#1E3A5F', light:'#ffffff'}}, function(err){
+    if(err) console.error(err);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Event handlers
+// ═══════════════════════════════════════════════════════════════════
+document.getElementById('master-toggle').addEventListener('change', async (e) => {
+  const newVal = e.target.checked;
+  try{
+    await sbUpdate('ntfy_subscribers', state.row.id, {attivo: newVal});
+    state.row.attivo = newVal;
+    applyMasterDim();
+    toast(newVal ? 'Notifiche attivate' : 'Notifiche disattivate');
+  }catch(err){
+    e.target.checked = !newVal;
+    toast('Errore salvataggio', true);
+  }
+});
+
+document.querySelectorAll('input[data-evento]').forEach(cb => {
+  cb.addEventListener('change', async () => {
+    const attivi = Array.from(document.querySelectorAll('input[data-evento]:checked'))
+      .map(x => x.dataset.evento);
+    try{
+      await sbUpdate('ntfy_subscribers', state.row.id, {eventi: attivi});
+      state.row.eventi = attivi;
+    }catch(err){
+      cb.checked = !cb.checked;
+      toast('Errore salvataggio', true);
+    }
+  });
+});
+
+document.getElementById('save-name').addEventListener('click', async () => {
+  const v = document.getElementById('display-name').value.trim().slice(0,40);
+  try{
+    await sbUpdate('ntfy_subscribers', state.row.id, {display_name: v || null});
+    state.row.display_name = v;
+    toast('Nome salvato');
+  }catch(err){
+    toast('Errore salvataggio', true);
+  }
+});
+
+document.getElementById('copy-topic').addEventListener('click', () => {
+  navigator.clipboard.writeText(state.row.topic).then(() => {
+    toast('Topic copiato');
+  }).catch(() => toast('Copia non riuscita', true));
+});
+
+document.getElementById('test-notify').addEventListener('click', async () => {
+  try{
+    await fetch(NTFY_SERVER + '/' + state.row.topic, {
+      method: 'POST',
+      headers: {
+        'Title': 'Test Effe Printing',
+        'Tags': 'rocket'
+      },
+      body: 'Le notifiche funzionano!'
+    });
+    toast('Notifica di test inviata');
+  }catch(err){
+    toast('Errore invio test', true);
+  }
+});
+
+loadOrCreate();
+</script>
+</body>
+</html>
