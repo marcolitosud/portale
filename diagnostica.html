@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Diagnostica Turni — Verifica dati produzione</title>
+<link rel="stylesheet" href="common.css"/>
+<style>
+body{font-family:system-ui,sans-serif;background:#F5F4F0;color:#0F1117;padding:20px;max-width:900px;margin:0 auto;font-size:14px}
+h1{font-size:20px;margin-bottom:6px}
+.sub{color:#6B7280;margin-bottom:20px;font-size:13px}
+.section{background:#fff;border:1px solid #DDDBD0;border-radius:8px;padding:16px;margin-bottom:14px}
+.section h2{font-size:14px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.spinner{width:14px;height:14px;border:2px solid #DDDBD0;border-top-color:#2A4F7F;border-radius:50%;animation:spin .8s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ok{color:#059669}
+.err{color:#B91C1C}
+.warn{color:#92400E}
+table{width:100%;border-collapse:collapse;font-size:13px;font-family:ui-monospace,monospace}
+th,td{padding:6px 10px;text-align:left;border-bottom:1px solid #ECEAE2}
+th{background:#F5F4F0;font-weight:600}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+.diff-bad{background:#FEE2E2;color:#B91C1C;font-weight:600}
+.diff-ok{background:#D1FAE5;color:#059669}
+.diff-warn{background:#FEF3C7;color:#92400E}
+.summary{padding:14px;border-radius:8px;margin-top:16px;font-size:14px;line-height:1.5}
+.summary.bad{background:#FEE2E2;border:1px solid #FCA5A5;color:#7F1D1D}
+.summary.ok{background:#D1FAE5;border:1px solid #6EE7B7;color:#065F46}
+.summary.warn{background:#FEF3C7;border:1px solid #FCD34D;color:#78350F}
+.muted{color:#6B7280;font-size:12px}
+button{background:#2A4F7F;color:#fff;border:none;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:600}
+button:hover{opacity:.9}
+</style>
+</head>
+<body>
+
+<h1>🔍 Diagnostica Presenze Produzione</h1>
+<div class="sub">Verifica automatica dello stato dei dati. Non modifica nulla.</div>
+
+<div class="section">
+  <h2>1. Conteggio totale per reparto (cloud)</h2>
+  <div id="totali">Caricamento... <span class="spinner"></span></div>
+</div>
+
+<div class="section">
+  <h2>2. Produzione — mese per mese</h2>
+  <div id="produzioneMesi">Caricamento... <span class="spinner"></span></div>
+</div>
+
+<div class="section">
+  <h2>3. localStorage (eventuale backup locale)</h2>
+  <div id="localStor">Caricamento... <span class="spinner"></span></div>
+</div>
+
+<div class="section">
+  <h2>4. mese_dip — produzione mese per mese</h2>
+  <div id="meseDip">Caricamento... <span class="spinner"></span></div>
+</div>
+
+<div id="riepilogo"></div>
+
+<script src="sb.js"></script>
+<script>
+async function sbCount(params){
+  var r = await fetch(SB_URL+'/rest/v1/presenze?'+params, {
+    method: 'HEAD',
+    headers: {apikey: SB_KEY, Authorization: 'Bearer '+SB_KEY, Prefer: 'count=exact'}
+  });
+  var cr = r.headers.get('content-range') || '';
+  var m = cr.match(/\/(\d+)$/);
+  return m ? parseInt(m[1]) : 0;
+}
+
+async function sbCountTable(table, params){
+  var r = await fetch(SB_URL+'/rest/v1/'+table+'?'+params, {
+    method: 'HEAD',
+    headers: {apikey: SB_KEY, Authorization: 'Bearer '+SB_KEY, Prefer: 'count=exact'}
+  });
+  var cr = r.headers.get('content-range') || '';
+  var m = cr.match(/\/(\d+)$/);
+  return m ? parseInt(m[1]) : 0;
+}
+
+// Stato globale per il riepilogo finale
+var stato = {
+  produzioneTot: 0,
+  produzioneMesi: {},
+  lsMesi: {},
+  meseDipMesi: {}
+};
+
+(async function(){
+  // ── 1) TOTALI PER REPARTO ──
+  try {
+    var reparti = ['produzione','manutenzione','logistica','allestimento','ctp'];
+    var rows = [];
+    for(var i=0;i<reparti.length;i++){
+      var rep = reparti[i];
+      var n = await sbCount('reparto=eq.'+rep);
+      rows.push({reparto: rep, tot: n});
+      if(rep === 'produzione') stato.produzioneTot = n;
+    }
+    var html = '<table><thead><tr><th>Reparto</th><th class="num">Righe presenze</th></tr></thead><tbody>';
+    rows.forEach(function(r){
+      var cls = r.reparto === 'produzione' ? 'diff-warn' : '';
+      html += '<tr><td>'+r.reparto+'</td><td class="num '+cls+'">'+r.tot.toLocaleString('it')+'</td></tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById('totali').innerHTML = html;
+  } catch(e){
+    document.getElementById('totali').innerHTML = '<span class="err">Errore: '+e.message+'</span>';
+  }
+
+  // ── 2) PRODUZIONE MESE PER MESE (ultimi 18 mesi) ──
+  try {
+    var oggi = new Date();
+    var mesi = [];
+    for(var k=17;k>=0;k--){
+      var d = new Date(oggi.getFullYear(), oggi.getMonth()-k, 1);
+      mesi.push({anno: d.getFullYear(), mese: d.getMonth()+1});
+    }
+    var html2 = '<table><thead><tr><th>Mese</th><th class="num">Cloud</th><th class="num">Atteso (~5 squadre × 5 dip × 25 gg)</th><th>Stato</th></tr></thead><tbody>';
+    var atteso = 5 * 5 * 25; // ~625 stima ragionevole
+    for(var j=0;j<mesi.length;j++){
+      var m = mesi[j];
+      var n = await sbCount('reparto=eq.produzione&anno=eq.'+m.anno+'&mese=eq.'+m.mese);
+      var key = m.anno+'-'+(m.mese<10?'0':'')+m.mese;
+      stato.produzioneMesi[key] = n;
+      var stat = '';
+      if(n === 0) stat = '<span class="muted">vuoto</span>';
+      else if(n < 100) stat = '<span class="err">⚠️ molto basso</span>';
+      else if(n < atteso * 0.5) stat = '<span class="warn">basso</span>';
+      else stat = '<span class="ok">ok</span>';
+      var rowCls = (n > 0 && n < atteso * 0.5) ? ' style="background:#FEF3C7"' : '';
+      html2 += '<tr'+rowCls+'><td>'+key+'</td><td class="num">'+n+'</td><td class="num muted">~'+atteso+'</td><td>'+stat+'</td></tr>';
+    }
+    html2 += '</tbody></table>';
+    document.getElementById('produzioneMesi').innerHTML = html2;
+  } catch(e){
+    document.getElementById('produzioneMesi').innerHTML = '<span class="err">Errore: '+e.message+'</span>';
+  }
+
+  // ── 3) LOCALSTORAGE ──
+  try {
+    var ls = JSON.parse(localStorage.getItem('ep_turni_presenze')||'null');
+    if(!ls || !ls.presenze){
+      document.getElementById('localStor').innerHTML = '<span class="muted">Nessun dato in localStorage</span>';
+    } else {
+      var html3 = '<table><thead><tr><th>Mese</th><th class="num">Presenze in localStorage</th><th class="num">Differenza vs cloud</th></tr></thead><tbody>';
+      var totalLs = 0;
+      Object.keys(ls.presenze).filter(function(k){return k.indexOf('produzione_')===0;}).sort().forEach(function(k){
+        var n = 0;
+        Object.keys(ls.presenze[k]).forEach(function(dip){
+          Object.keys(ls.presenze[k][dip]).forEach(function(g){
+            if(ls.presenze[k][dip][g]) n++;
+          });
+        });
+        totalLs += n;
+        var ym = k.replace('produzione_','');
+        stato.lsMesi[ym] = n;
+        var cloud = stato.produzioneMesi[ym] || 0;
+        var diff = n - cloud;
+        var diffCls = diff > 0 ? 'diff-ok' : (diff < 0 ? 'diff-bad' : '');
+        var diffTxt = diff > 0 ? ('+'+diff+' ⚡ localStorage ha PIÙ dati') : (diff < 0 ? diff+'' : '0');
+        html3 += '<tr><td>'+ym+'</td><td class="num">'+n+'</td><td class="num '+diffCls+'">'+diffTxt+'</td></tr>';
+      });
+      html3 += '</tbody></table>';
+      html3 += '<div class="muted" style="margin-top:8px">Totale localStorage produzione: <b>'+totalLs+'</b> righe</div>';
+      document.getElementById('localStor').innerHTML = html3;
+    }
+  } catch(e){
+    document.getElementById('localStor').innerHTML = '<span class="err">Errore: '+e.message+'</span>';
+  }
+
+  // ── 4) MESE_DIP ──
+  try {
+    var oggi2 = new Date();
+    var mesi2 = [];
+    for(var k2=17;k2>=0;k2--){
+      var d2 = new Date(oggi2.getFullYear(), oggi2.getMonth()-k2, 1);
+      mesi2.push({anno: d2.getFullYear(), mese: d2.getMonth()+1});
+    }
+    var html4 = '<table><thead><tr><th>Mese</th><th class="num">Righe mese_dip</th><th>Atteso</th></tr></thead><tbody>';
+    for(var j2=0;j2<mesi2.length;j2++){
+      var mm = mesi2[j2];
+      var n2 = await sbCountTable('mese_dip', 'reparto=eq.produzione&anno=eq.'+mm.anno+'&mese=eq.'+mm.mese);
+      var key2 = mm.anno+'-'+(mm.mese<10?'0':'')+mm.mese;
+      stato.meseDipMesi[key2] = n2;
+      var stat2 = n2 === 0 ? '<span class="muted">— (self-heal lo ricostruisce)</span>' : (n2 >= 5 ? '<span class="ok">ok</span>' : '<span class="warn">basso</span>');
+      html4 += '<tr><td>'+key2+'</td><td class="num">'+n2+'</td><td>'+stat2+'</td></tr>';
+    }
+    html4 += '</tbody></table>';
+    document.getElementById('meseDip').innerHTML = html4;
+  } catch(e){
+    document.getElementById('meseDip').innerHTML = '<span class="err">Errore: '+e.message+'</span>';
+  }
+
+  // ── RIEPILOGO ──
+  var totLs = Object.values(stato.lsMesi).reduce(function(a,b){return a+b;},0);
+  var totCloud = stato.produzioneTot;
+  var mesiVuotiCloud = Object.keys(stato.produzioneMesi).filter(function(k){return stato.produzioneMesi[k]===0;}).length;
+  var mesiVuotiMd = Object.keys(stato.meseDipMesi).filter(function(k){return stato.meseDipMesi[k]===0;}).length;
+  var msg = '';
+  var cls = 'ok';
+
+  if(totLs > totCloud * 1.2){
+    cls = 'ok';
+    msg = '🎉 <b>Buona notizia: il localStorage ha più dati del cloud.</b><br>'+
+          'Hai <b>'+totLs+'</b> righe in localStorage contro <b>'+totCloud+'</b> in cloud. '+
+          'Possiamo ripristinare i dati persi facendo un upsert da localStorage verso Supabase. Non chiudere questa tab.';
+  } else if(totCloud < 500){
+    cls = 'bad';
+    msg = '❌ <b>Conferma: dati cloud molto ridotti.</b><br>'+
+          'Solo <b>'+totCloud+'</b> righe produzione totali in cloud. '+
+          'Lo storico è effettivamente compromesso. Se il localStorage non ha più dati, dovrai recuperare dal backup GitHub Actions.';
+  } else {
+    cls = 'warn';
+    msg = 'ℹ️ <b>Diagnostica completata.</b><br>'+
+          'Cloud: '+totCloud+' righe produzione. localStorage: '+totLs+' righe. '+
+          'Mesi vuoti su cloud: '+mesiVuotiCloud+'/18. mese_dip mancanti: '+mesiVuotiMd+'/18.';
+  }
+
+  document.getElementById('riepilogo').innerHTML = '<div class="summary '+cls+'">'+msg+'</div>';
+})();
+</script>
+</body>
+</html>
