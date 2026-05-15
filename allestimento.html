@@ -1,0 +1,1594 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<script>
+// ANTI-FLASH-AUTH-GUARD: redirect prima di disegnare UI se sessione assente/scaduta.
+(function(){
+  try{
+    var raw=localStorage.getItem('ep_sess3_allestimento');
+    if(!raw){document.documentElement.style.display="none";window.location.replace("portale.html");return;}
+    var s=JSON.parse(raw);
+    if(!s||!s.ts||(Date.now()-s.ts)>=90*24*60*60*1000){document.documentElement.style.display="none";window.location.replace("portale.html");return;}
+  }catch(e){document.documentElement.style.display="none";window.location.replace("portale.html");}
+})();
+</script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="theme-color" content="#1E3A5F"/>
+<title>Allestimento — Effe Printing</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="common.css"/>
+<style>
+/* ══════════════════════════════════════════
+   RESET & VARIABILI
+══════════════════════════════════════════ */
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --ink:   #1A1F2E;
+  --ink2:  #3D4A5C;
+  --ink3:  #6B7A94;
+  --paper: #F0F2F5;
+  --paper2:#E8ECF2;
+  --paper3:#C5CBD8;
+  --white: #FFFFFF;
+  --g:     #1E3A5F;   /* navy primario */
+  --g2:    #2A4F7F;
+  --g3:    #3B82F6;
+  --gs:    #DBEAFE;
+  --ok:    #10B981;
+  --oks:   #D1FAE5;
+  --warn:  #F59E0B;
+  --warns: #FEF3C7;
+  --red:   #B91C1C;
+  --reds:  #FEE2E2;
+  --pink:  #EC4899;   /* accent allestimento (coerente con portale) */
+  --pinks: #FCE7F3;
+  --r:     10px;
+  --r2:    14px;
+  --mono:  'DM Mono', monospace;
+  --sans:  'DM Sans', sans-serif;
+  --sh:    0 1px 4px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.05);
+}
+html, body {
+  font-family: var(--sans);
+  font-size: 15px;
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: contain;
+}
+
+/* ══════════════════════════════════════════
+   TOPBAR
+══════════════════════════════════════════ */
+.topbar {
+  background: var(--g);
+  background-image:
+    linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px);
+  background-size: 32px 32px;
+  min-height: 52px;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  flex-shrink: 0;
+}
+.tb-left  { display: flex; align-items: center; gap: 10px; flex-shrink:0; }
+.tb-icon  { width:30px; height:30px; background:rgba(255,255,255,.15); border-radius:8px; display:flex; align-items:center; justify-content:center; color:white; font-size:12px; font-weight:700; font-family:var(--mono);}
+.tb-title { color: white; font-size: 14px; font-weight: 600; }
+.tb-mach  {
+  background: rgba(255,255,255,.18);
+  border: 1px solid rgba(255,255,255,.35);
+  color: white;
+  font-size: 12px;
+  font-family: var(--sans);
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  display:flex; align-items:center; gap:6px;
+  white-space:nowrap;
+}
+.tb-mach.empty { background: rgba(244,114,182,.35); border-color: rgba(244,114,182,.7); animation: pulse-tb 2s ease-in-out infinite; }
+@keyframes pulse-tb { 50% { background: rgba(244,114,182,.55); } }
+.tb-mach svg { width:13px; height:13px; }
+.tb-back {
+  background:none; border:none; color:rgba(255,255,255,.7);
+  font-size: 20px; cursor:pointer; line-height:1; padding:4px 6px;
+}
+
+/* ══════════════════════════════════════════
+   BOTTOM NAV
+══════════════════════════════════════════ */
+.botnav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--white);
+  border-top: 1px solid var(--paper2);
+  display: flex;
+  z-index: 100;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.bn-item {
+  flex: 1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap: 3px; padding: 10px 4px; cursor:pointer; border:none; background:none;
+  font-family:var(--sans); color:var(--ink3); font-size:10px; font-weight:500; transition:.12s;
+}
+.bn-item.on { color: var(--g); }
+.bn-item svg { width:22px; height:22px; stroke:currentColor; stroke-width:1.8; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.bn-scan {
+  flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:3px; padding:0; cursor:pointer; border:none; background:none;
+}
+.bn-scan-btn {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--pink); color: white;
+  display:flex; align-items:center; justify-content:center;
+  margin-top: -16px;
+  box-shadow: 0 6px 18px rgba(236,72,153,.45), 0 0 0 3px white;
+}
+.bn-scan-btn svg { width: 26px; height: 26px; stroke: white; stroke-width:2; fill:none; }
+.bn-scan-lbl { font-size:10px; font-weight:600; color: var(--pink); margin-top:2px; }
+
+/* ══════════════════════════════════════════
+   PAGES
+══════════════════════════════════════════ */
+.pages   { padding-bottom: 90px; min-height: calc(100vh - 52px); }
+.page    { display:none; }
+.page.on { display:block; }
+.p-inner { padding: 16px 14px; max-width: 720px; margin: 0 auto; }
+.p-title { font-size: 22px; font-weight: 700; color: var(--ink); margin-bottom: 4px; letter-spacing:-.01em;}
+.p-sub   { font-size: 13px; color: var(--ink3); margin-bottom: 18px; }
+
+/* ══════════════════════════════════════════
+   CARDS & GENERIC
+══════════════════════════════════════════ */
+.card { background: var(--white); border: 1px solid var(--paper2); border-radius: var(--r2); margin-bottom: 12px; box-shadow: var(--sh); }
+.card-body { padding: 14px 16px; }
+.card-head { padding: 12px 16px; border-bottom: 1px solid var(--paper2); display:flex; align-items:center; justify-content:space-between; }
+.sec-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--ink3); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+.sec-label::after { content:''; flex:1; height:1px; background:var(--paper2); }
+
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  border:none; border-radius: var(--r); padding: 11px 16px; font-size: 14px; font-weight:600; font-family: var(--sans); cursor: pointer; transition: .12s; }
+.btn-primary { background: var(--g); color: white; }
+.btn-primary:hover { background: var(--g2); }
+.btn-ghost { background: var(--white); color: var(--ink2); border: 1.5px solid var(--paper3); }
+.btn-ghost:hover { background: var(--paper); }
+.btn-danger { background: var(--red); color: white; }
+.btn-warn { background: var(--warn); color: white; }
+.btn-pink { background: var(--pink); color: white; }
+.btn-pink:hover { background: #DB2777; }
+.btn-sm { padding: 7px 11px; font-size: 12px; }
+.btn-full { width: 100%; }
+.btn-spin { width: 16px; height: 16px; border:2.5px solid rgba(255,255,255,.35); border-top-color:white; border-radius:50%; animation: _bspin .7s linear infinite; flex-shrink:0; }
+@keyframes _bspin { to { transform: rotate(360deg); } }
+.btn.loading { opacity: .65; cursor:not-allowed; pointer-events: none; }
+
+/* ══════════════════════════════════════════
+   KPI / STATS
+══════════════════════════════════════════ */
+.kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.kpi { background: var(--white); border: 1px solid var(--paper2); border-radius: var(--r2); padding: 14px 16px; box-shadow: var(--sh); position:relative; overflow:hidden;}
+.kpi.full { grid-column: span 2; }
+.kpi-val  { font-size: 30px; font-weight: 700; font-family: var(--mono); line-height: 1; color: var(--ink); }
+.kpi-lbl  { font-size: 10px; color: var(--ink3); text-transform: uppercase; letter-spacing: .06em; margin-top: 5px; font-weight:600; }
+.kpi-sub  { font-size: 11px; color: var(--ink2); margin-top: 4px; font-family: var(--mono); }
+.kpi-accent { position:absolute; top:0; left:0; width:3px; height:100%; }
+.kpi-accent.pink { background: var(--pink); }
+.kpi-accent.blue { background: var(--g3); }
+.kpi-accent.ok   { background: var(--ok); }
+.kpi-accent.warn { background: var(--warn); }
+
+/* ══════════════════════════════════════════
+   QUICK SCAN HERO (Oggi)
+══════════════════════════════════════════ */
+.hero-scan {
+  background: linear-gradient(135deg, var(--g) 0%, var(--g2) 100%);
+  background-image:
+    linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px),
+    linear-gradient(135deg, var(--g) 0%, var(--g2) 100%);
+  background-size: 24px 24px, 24px 24px, 100% 100%;
+  border-radius: var(--r2);
+  padding: 22px 18px;
+  color: white;
+  margin-bottom: 14px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.hero-mach { font-size: 11px; opacity: .8; text-transform:uppercase; letter-spacing:.08em; margin-bottom: 4px; font-family: var(--mono); }
+.hero-mach b { color: var(--gs); }
+.hero-op { font-size: 11px; opacity: .65; margin-bottom: 14px; font-family: var(--mono); }
+.hero-cta {
+  background: var(--pink); color: white; border: none;
+  padding: 18px 24px; border-radius: var(--r);
+  font-size: 16px; font-weight: 700; font-family: var(--sans);
+  width: 100%; cursor: pointer; display:flex; align-items:center; justify-content:center; gap:10px;
+  box-shadow: 0 4px 16px rgba(236,72,153,.4);
+}
+.hero-cta svg { width: 22px; height: 22px; }
+.hero-cta:active { transform: scale(.98); }
+
+.scan-manual { display:flex; gap:6px; margin-top: 10px; }
+.scan-manual input {
+  flex:1; padding: 10px 12px; border: 1.5px solid rgba(255,255,255,.25);
+  background: rgba(255,255,255,.1); color: white;
+  border-radius: 8px; font-size:13px; font-family: var(--mono); outline: none;
+}
+.scan-manual input::placeholder { color: rgba(255,255,255,.5); }
+.scan-manual input:focus { border-color: rgba(255,255,255,.5); background: rgba(255,255,255,.18); }
+.scan-manual button {
+  background: rgba(255,255,255,.18); color: white; border: 1px solid rgba(255,255,255,.35);
+  padding: 0 14px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: var(--sans);
+}
+
+/* ══════════════════════════════════════════
+   RECENT SCANS LIST
+══════════════════════════════════════════ */
+.scan-row {
+  background: var(--white); border: 1px solid var(--paper2); border-radius: var(--r);
+  padding: 11px 13px; margin-bottom: 8px;
+  display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center;
+}
+.scan-row.fresh { animation: flash-row 1.5s ease-out; }
+@keyframes flash-row { 0% { background: var(--oks); } 100% { background: var(--white); } }
+.scan-num {
+  font-family: var(--mono); font-size: 18px; font-weight: 700; color: var(--g);
+  background: var(--gs); padding: 6px 10px; border-radius: 8px; min-width: 50px; text-align:center;
+}
+.scan-info { min-width: 0; }
+.scan-com { font-size: 13px; font-weight: 600; color: var(--ink); overflow:hidden; text-overflow: ellipsis; white-space:nowrap; }
+.scan-ver { font-size: 11px; color: var(--ink2); font-family: var(--mono); }
+.scan-meta { font-size: 10px; color: var(--ink3); font-family: var(--mono); margin-top: 2px; }
+.scan-right { display:flex; flex-direction:column; align-items:flex-end; gap:3px; }
+.scan-time { font-size: 11px; color: var(--ink3); font-family: var(--mono); }
+.scan-mach { font-size: 9px; background: var(--pinks); color: var(--pink); padding: 2px 7px; border-radius: 10px; font-weight: 700; font-family: var(--mono); }
+.scan-x { background:none; border:none; color: var(--ink3); cursor: pointer; padding:4px 8px; font-size:16px; line-height:1; border-radius:6px; }
+.scan-x:hover { color: var(--red); background: var(--reds); }
+
+.empty-state {
+  text-align:center; padding: 40px 20px;
+  color: var(--ink3); font-size: 13px;
+}
+.empty-state-icon { font-size: 36px; opacity: .4; margin-bottom: 10px; }
+
+/* ══════════════════════════════════════════
+   AVANZAMENTO COMMESSE
+══════════════════════════════════════════ */
+.com-card {
+  background: var(--white); border: 1px solid var(--paper2); border-radius: var(--r2);
+  margin-bottom: 12px; box-shadow: var(--sh); overflow: hidden;
+}
+.com-head {
+  padding: 12px 14px; border-bottom: 1px solid var(--paper2);
+  display:flex; align-items:center; justify-content:space-between; gap: 10px; cursor:pointer;
+  background: var(--white);
+}
+.com-head-l { min-width: 0; flex: 1; }
+.com-title { font-size: 14px; font-weight: 700; color: var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.com-cli   { font-size: 11px; color: var(--ink3); margin-top: 2px; }
+.com-prog-overall { font-size: 16px; font-weight: 700; font-family: var(--mono); color: var(--g); white-space:nowrap; }
+.com-prog-overall.done { color: var(--ok); }
+.com-versions { padding: 10px 14px 12px; }
+.ver-row { margin-bottom: 8px; }
+.ver-row:last-child { margin-bottom: 0; }
+.ver-row-head { display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px; }
+.ver-name { font-size: 12px; font-weight: 600; color: var(--ink2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ver-cnt { font-size: 11px; font-family: var(--mono); color: var(--ink2); font-weight:600; white-space:nowrap; margin-left:8px; }
+.ver-cnt.done { color: var(--ok); }
+.ver-bar { background: var(--paper2); border-radius: 999px; height: 6px; overflow: hidden; }
+.ver-bar-fill { background: var(--g3); height: 100%; border-radius: 999px; transition: width .4s ease; }
+.ver-bar-fill.done { background: var(--ok); }
+
+.com-badge { font-size: 9px; background: var(--gs); color: var(--g); padding: 2px 7px; border-radius: 10px; font-weight: 700; font-family: var(--mono); text-transform: uppercase; letter-spacing:.04em; }
+.com-badge.done { background: var(--oks); color: var(--ok); }
+.com-badge.partial { background: var(--warns); color: var(--warn); }
+
+/* ══════════════════════════════════════════
+   FILTRI CRONOLOGIA
+══════════════════════════════════════════ */
+.filters { display: flex; flex-direction:column; gap: 8px; margin-bottom: 12px; }
+.filters input, .filters select {
+  padding: 11px 13px; border: 1.5px solid var(--paper3); border-radius: var(--r);
+  font-size: 14px; font-family: var(--sans); background: var(--white); color: var(--ink);
+  outline: none; width: 100%; -webkit-appearance: none; appearance:none;
+}
+.filters input:focus, .filters select:focus { border-color: var(--g3); }
+
+.day-group { margin-bottom: 14px; }
+.day-head { font-size: 11px; font-weight: 700; color: var(--ink3); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 8px; padding-left: 4px; }
+
+/* ══════════════════════════════════════════
+   MODALI
+══════════════════════════════════════════ */
+.m-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:200; align-items:flex-end; justify-content:center; }
+.m-overlay.on { display:flex; animation: fade-in .15s; }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.modal       { background:var(--white); border-radius: 18px 18px 0 0; width:100%; max-width:560px; max-height:92vh; display:flex; flex-direction:column; animation: slide-up .2s; }
+@keyframes slide-up { from { transform: translateY(20px); } to { transform: translateY(0); } }
+.modal-head  { padding:16px 20px; border-bottom:1px solid var(--paper2); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+.modal-head h2 { font-size:16px; font-weight:600; color:var(--ink); }
+.modal-x     { background:none; border:none; font-size:24px; color:var(--ink3); cursor:pointer; line-height:1; padding:0 4px; }
+.modal-body  { padding:18px 20px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:12px; }
+.modal-foot  { padding:14px 20px; border-top:1px solid var(--paper2); display:flex; flex-direction:column; gap:8px; flex-shrink:0; }
+
+.f { display:flex; flex-direction:column; gap:5px; }
+.f label { font-size:11px; font-weight:600; color: var(--ink2); letter-spacing:.03em; }
+.f input, .f select, .f textarea {
+  padding: 11px 13px; border: 1.5px solid var(--paper3); border-radius: var(--r);
+  font-size: 14px; font-family: var(--sans); background: var(--white); color: var(--ink); outline: none;
+  width: 100%; -webkit-appearance: none; appearance: none;
+}
+.f input:focus, .f select:focus { border-color: var(--g3); box-shadow: 0 0 0 3px var(--gs); }
+
+/* Macchina selector chips */
+.mach-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mach-chip {
+  background: var(--paper); border: 2px solid var(--paper3); border-radius: var(--r);
+  padding: 14px 12px; text-align: center; cursor: pointer; transition: .12s;
+  font-family: var(--sans);
+}
+.mach-chip:hover { border-color: var(--g3); }
+.mach-chip.on { background: var(--pinks); border-color: var(--pink); }
+.mach-chip-name { font-size: 14px; font-weight: 700; color: var(--ink); }
+.mach-chip-sub  { font-size: 10px; color: var(--ink3); margin-top: 2px; font-family: var(--mono); }
+.mach-chip.on .mach-chip-name { color: var(--pink); }
+
+/* Detail bancali list dentro modale */
+.det-list { display: flex; flex-direction: column; gap: 6px; }
+.det-row { display:grid; grid-template-columns: 30px 1fr auto auto; gap:8px; align-items:center; padding: 8px 10px; background: var(--paper); border-radius: 8px; font-size: 12px; }
+.det-row.missing { background: var(--reds); }
+.det-row.done    { background: var(--oks); }
+.det-num { font-family: var(--mono); font-weight: 700; color: var(--ink); }
+.det-info { font-size: 11px; color: var(--ink2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.det-time { font-size: 10px; color: var(--ink3); font-family: var(--mono); }
+.det-mach { font-size: 9px; background: white; color: var(--ink2); padding: 2px 6px; border-radius: 8px; font-family: var(--mono); font-weight:600; }
+
+/* ══════════════════════════════════════════
+   SCANNER
+══════════════════════════════════════════ */
+.overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:500; flex-direction:column; align-items:center; justify-content:flex-start; }
+.overlay.on { display:flex; }
+.scanner-wrap    { position:relative; width:100%; max-width:480px; flex:1; overflow:hidden; }
+#scanVideo       { width:100%; height:100%; object-fit:cover; display:block; }
+.scanner-frame   { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
+.scanner-box-ui  { width:240px; height:240px; position:relative; }
+.scanner-box-ui::before, .scanner-box-ui::after { content:''; position:absolute; width:42px; height:42px; border-color: var(--pink); border-style:solid; }
+.scanner-box-ui::before { top:0; left:0; border-width:3px 0 0 3px; border-radius:4px 0 0 0; }
+.scanner-box-ui::after  { top:0; right:0; border-width:3px 3px 0 0; border-radius:0 4px 0 0; }
+.scanner-box-corners::before, .scanner-box-corners::after { content:''; position:absolute; width:42px; height:42px; border-color: var(--pink); border-style:solid; }
+.scanner-box-corners { position:absolute; inset:0; }
+.scanner-box-corners::before { bottom:0; left:0; border-width:0 0 3px 3px; border-radius:0 0 0 4px; }
+.scanner-box-corners::after  { bottom:0; right:0; border-width:0 3px 3px 0; border-radius:0 0 4px 0; }
+.scanner-line    { position:absolute; left:0; right:0; height:2px; background: var(--pink); opacity:.85; animation:scan 2s ease-in-out infinite; box-shadow:0 0 12px var(--pink); }
+@keyframes scan  { 0%,100%{top:8%} 50%{top:92%} }
+.scanner-hint-bar { background:white; padding:14px 20px; text-align:center; font-size:13px; color:var(--ink2); width:100%; max-width:480px; }
+.scanner-hint-bar strong { display:block; font-size:14px; color:var(--ink); margin-bottom:3px; }
+.scanner-hint-bar .ms { font-size: 11px; color: var(--pink); font-weight: 700; font-family: var(--mono); margin-top: 4px; }
+.scanner-close   { margin-top:10px; margin-bottom: 14px; background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.35); color:white; font-size:14px; font-family:var(--sans); padding:12px 32px; border-radius:var(--r); cursor:pointer; font-weight:600; }
+#scanCanvas { display:none; }
+
+/* ══════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════ */
+.toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(10px); background:var(--ink); color:white; padding:11px 22px; border-radius:30px; font-size:13px; font-weight:500; z-index:9999; opacity:0; transition:.25s; pointer-events:none; max-width: 92%; text-align: center; box-shadow:0 4px 20px rgba(0,0,0,.3); }
+.toast.on  { opacity:1; transform:translateX(-50%) translateY(0); }
+.toast.err { background:var(--red); }
+.toast.ok  { background: var(--ok); }
+
+/* ══════════════════════════════════════════
+   DESKTOP TWEAKS
+══════════════════════════════════════════ */
+@media (min-width: 720px) {
+  .p-inner { padding: 22px 20px; }
+  .kpi-grid { grid-template-columns: repeat(4, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     TOPBAR
+══════════════════════════════════════════ -->
+<div class="topbar">
+  <div class="tb-left">
+    <button class="tb-back" onclick="tornaPortale()" title="Torna al portale">←</button>
+    <div class="tb-icon">EP</div>
+    <div class="tb-title">Allestimento</div>
+  </div>
+  <button class="tb-mach" id="tbMach" onclick="openMMach()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    <span id="tbMachLbl">— scegli —</span>
+  </button>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGES
+══════════════════════════════════════════ -->
+<div class="pages">
+
+  <!-- ── OGGI ── -->
+  <div class="page on" id="pg-oggi">
+    <div class="p-inner">
+
+      <div class="hero-scan">
+        <div class="hero-mach">Macchina · <b id="heroMach">— nessuna —</b></div>
+        <div class="hero-op" id="heroOp">Operatore: nessuno · <a href="#" onclick="event.preventDefault();openMOp()" style="color:var(--gs);text-decoration:underline">imposta</a></div>
+        <button class="hero-cta" onclick="openScanner()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="5" height="5" rx="1"/><rect x="16" y="3" width="5" height="5" rx="1"/><rect x="3" y="16" width="5" height="5" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>
+          Scansiona bancale
+        </button>
+        <div class="scan-manual">
+          <input id="scanInput" placeholder="…o incolla testo QR" inputmode="text" autocomplete="off"
+            onkeydown="if(event.key==='Enter'){scanQR(this.value);this.value=''}"/>
+          <button onclick="scanQR(document.getElementById('scanInput').value);document.getElementById('scanInput').value=''">OK</button>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-accent pink"></div>
+          <div class="kpi-val" id="kpiBancali">0</div>
+          <div class="kpi-lbl">Bancali oggi</div>
+        </div>
+        <div class="kpi"><div class="kpi-accent blue"></div>
+          <div class="kpi-val" id="kpiCopie">0</div>
+          <div class="kpi-lbl">Copie oggi</div>
+        </div>
+        <div class="kpi"><div class="kpi-accent ok"></div>
+          <div class="kpi-val" id="kpiCommesse">0</div>
+          <div class="kpi-lbl">Commesse</div>
+        </div>
+        <div class="kpi"><div class="kpi-accent warn"></div>
+          <div class="kpi-val" id="kpiRate">—</div>
+          <div class="kpi-lbl">Bancali/ora</div>
+        </div>
+      </div>
+
+      <div class="sec-label">Ultime scansioni · oggi</div>
+      <div id="recentList"></div>
+
+    </div>
+  </div>
+
+  <!-- ── AVANZAMENTO ── -->
+  <div class="page" id="pg-avanz">
+    <div class="p-inner">
+      <div class="p-title">Avanzamento commesse</div>
+      <div class="p-sub">Stato di tutte le commesse aperte in allestimento</div>
+      <div class="filters">
+        <input id="avQ" placeholder="🔍 Cerca commessa, cliente, versione…" oninput="renderAvanzamento()"/>
+        <select id="avFilter" onchange="renderAvanzamento()">
+          <option value="aperte">Solo commesse aperte (non finite)</option>
+          <option value="tutte">Tutte le commesse</option>
+          <option value="finite">Solo commesse completate</option>
+        </select>
+      </div>
+      <div id="avList"></div>
+    </div>
+  </div>
+
+  <!-- ── CRONOLOGIA ── -->
+  <div class="page" id="pg-storia">
+    <div class="p-inner">
+      <div class="p-title">Cronologia scansioni</div>
+      <div class="p-sub">Ultimi 30 giorni · scorri per filtrare</div>
+      <div class="filters">
+        <input id="storQ" placeholder="🔍 Cerca commessa, cliente, versione…" oninput="renderStoria()"/>
+        <select id="storMach" onchange="renderStoria()"></select>
+        <select id="storDay" onchange="renderStoria()"></select>
+      </div>
+      <div id="storList"></div>
+    </div>
+  </div>
+
+  <!-- ── STATS ── -->
+  <div class="page" id="pg-stats">
+    <div class="p-inner">
+      <div class="p-title">Statistiche</div>
+      <div class="p-sub">Produttività ultime settimane</div>
+      <div id="statsContent"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════
+     BOTTOM NAV
+══════════════════════════════════════════ -->
+<div class="botnav">
+  <button class="bn-item on" data-page="oggi" onclick="goPage('oggi')">
+    <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    Oggi
+  </button>
+  <button class="bn-item" data-page="avanz" onclick="goPage('avanz')">
+    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    Avanzamento
+  </button>
+  <button class="bn-scan" onclick="openScanner()">
+    <div class="bn-scan-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="5" height="5" rx="1"/><rect x="16" y="3" width="5" height="5" rx="1"/><rect x="3" y="16" width="5" height="5" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>
+    </div>
+    <span class="bn-scan-lbl">SCAN</span>
+  </button>
+  <button class="bn-item" data-page="storia" onclick="goPage('storia')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    Cronologia
+  </button>
+  <button class="bn-item" data-page="stats" onclick="goPage('stats')">
+    <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    Stats
+  </button>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCANNER OVERLAY
+══════════════════════════════════════════ -->
+<div class="overlay" id="scanOverlay">
+  <div class="scanner-wrap">
+    <video id="scanVideo" playsinline autoplay muted></video>
+    <div class="scanner-frame">
+      <div class="scanner-box-ui">
+        <div class="scanner-box-corners"></div>
+        <div class="scanner-line"></div>
+      </div>
+    </div>
+  </div>
+  <canvas id="scanCanvas"></canvas>
+  <div class="scanner-hint-bar">
+    <strong>Inquadra il QR sull'etichetta del bancale</strong>
+    Mantieni il QR centrato nel riquadro rosa
+    <div class="ms" id="scanMach">— scegli macchina prima —</div>
+  </div>
+  <button class="scanner-close" onclick="closeScanner()">✕ Chiudi</button>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODALE: selezione macchina
+══════════════════════════════════════════ -->
+<div class="m-overlay" id="mMach">
+  <div class="modal">
+    <div class="modal-head"><h2>Macchina attiva</h2><button class="modal-x" onclick="closeM('mMach')">×</button></div>
+    <div class="modal-body">
+      <div style="font-size:12px;color:var(--ink2);margin-bottom:6px">
+        Scegli su quale macchina stai lavorando. La scelta resta memorizzata su questo dispositivo.
+      </div>
+      <div class="mach-grid" id="machGrid"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeM('mMach')">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODALE: operatore
+══════════════════════════════════════════ -->
+<div class="m-overlay" id="mOp">
+  <div class="modal">
+    <div class="modal-head"><h2>Operatore di turno</h2><button class="modal-x" onclick="closeM('mOp')">×</button></div>
+    <div class="modal-body">
+      <div style="font-size:12px;color:var(--ink2);margin-bottom:4px">
+        Opzionale. Il nome viene salvato accanto a ogni scansione per tracciabilità.
+      </div>
+      <div class="f"><label>Nome operatore</label><input id="opInput" placeholder="es. Mario Rossi" autocomplete="off"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" onclick="salvaOp()">Salva</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('opInput').value='';salvaOp()">Cancella</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODALE: dettaglio commessa
+══════════════════════════════════════════ -->
+<div class="m-overlay" id="mCom">
+  <div class="modal">
+    <div class="modal-head"><h2 id="mComTitle">Commessa</h2><button class="modal-x" onclick="closeM('mCom')">×</button></div>
+    <div class="modal-body" id="mComBody"></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeM('mCom')">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODALE: dettaglio scansione (per eliminare)
+══════════════════════════════════════════ -->
+<div class="m-overlay" id="mScan">
+  <div class="modal">
+    <div class="modal-head"><h2>Dettaglio scansione</h2><button class="modal-x" onclick="closeM('mScan')">×</button></div>
+    <div class="modal-body" id="mScanBody"></div>
+    <div class="modal-foot">
+      <button class="btn btn-danger" id="mScanDel" onclick="confermaEliminaScan()">🗑 Elimina scansione</button>
+      <button class="btn btn-ghost" onclick="closeM('mScan')">Annulla</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="sb.js"></script>
+<script>
+'use strict';
+
+// ══════════════════════════════════════════
+// AUTH GUARD (secondo controllo, redundance)
+// ══════════════════════════════════════════
+(function(){
+  try{
+    const raw = localStorage.getItem('ep_sess3_allestimento');
+    if(!raw){ window.location.replace('portale.html'); return; }
+    const sess = JSON.parse(raw);
+    const oreMax = 90*24*60*60*1000;
+    if(Date.now() - sess.ts >= oreMax){ window.location.replace('portale.html'); return; }
+  }catch(e){ window.location.replace('portale.html'); return; }
+})();
+
+// ══════════════════════════════════════════
+// COSTANTI DI CONFIGURAZIONE
+// ══════════════════════════════════════════
+// Macchine disponibili in reparto: rinomina qui se cambiano.
+// "id" = chiave interna salvata in DB; "lbl" = etichetta mostrata; "sub" = sottotitolo opzionale.
+const MACCHINE = [
+  { id: 'Tempo 1', lbl: 'Tempo 1', sub: 'Punto metallico' },
+  { id: 'Tempo 2', lbl: 'Tempo 2', sub: 'Punto metallico' },
+  { id: 'Tempo 3', lbl: 'Tempo 3', sub: 'Punto metallico' },
+  { id: 'Tempo 4', lbl: 'Tempo 4', sub: 'Punto metallico' },
+  { id: 'Tempo 5', lbl: 'Tempo 5', sub: 'Punto metallico' },
+  { id: 'PM 300',  lbl: 'PM 300',  sub: 'Punto metallico 300' }
+];
+
+const MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
+              'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+
+// Per cronologia: profondità massima caricata (giorni)
+const STORIA_GIORNI = 30;
+
+// ══════════════════════════════════════════
+// HELPER DOM
+// ══════════════════════════════════════════
+function g(id){ return document.getElementById(id); }
+function h(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmt(n){ return Number(n||0).toLocaleString('it-IT'); }
+function pad(n){ return String(n).padStart(2,'0'); }
+
+// ══════════════════════════════════════════
+// SUPABASE — fetch con timeout + retry
+// ══════════════════════════════════════════
+function _sbH(){ return {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'}; }
+
+function _fetchTimeout(url, opts, ms){
+  ms = ms || 15000;
+  const cc = new AbortController();
+  const id = setTimeout(()=>cc.abort(), ms);
+  const o = Object.assign({}, opts||{}, {signal: cc.signal});
+  return fetch(url, o).finally(()=>clearTimeout(id));
+}
+
+async function _retry(label, doFetch, max){
+  max = max || 3;
+  let attempts = 0, lastErr = null;
+  while(attempts < max){
+    attempts++;
+    try{
+      const r = await doFetch();
+      if(!r.ok){ const t = await r.text().catch(()=>''); throw new Error('HTTP '+r.status+' '+t); }
+      if(attempts > 1) console.log('['+label+'] OK al tentativo '+attempts);
+      return r;
+    }catch(e){
+      lastErr = e;
+      console.warn('['+label+'] tentativo '+attempts+'/'+max+' fallito:', e.message||e);
+      if(attempts < max) await new Promise(res=>setTimeout(res, attempts*800));
+    }
+  }
+  throw lastErr;
+}
+
+// Toast
+let _tt;
+function toast(msg, kind){
+  // kind: 'err' | 'ok' | undefined (default = neutro)
+  const t = g('toast');
+  t.textContent = msg;
+  let cls = 'toast on';
+  if(kind === 'err') cls += ' err';
+  else if(kind === 'ok') cls += ' ok';
+  t.className = cls;
+  clearTimeout(_tt);
+  _tt = setTimeout(()=>{ t.className = 'toast'; }, 3000);
+}
+
+// Wrapper anti-doppio-click (riusabile)
+async function asyncBtn(btn, fn){
+  if(btn.disabled || btn.classList.contains('loading')) return;
+  const orig = btn.innerHTML;
+  btn.classList.add('loading'); btn.disabled = true;
+  btn.innerHTML = '<span class="btn-spin"></span><span>Attendere…</span>';
+  const t0 = Date.now();
+  try{ await fn(); }
+  catch(e){ console.error('asyncBtn:', e); toast('Errore: '+(e.message||'operazione fallita'), 'err'); }
+  finally{
+    const elapsed = Date.now() - t0;
+    if(elapsed < 400) await new Promise(r=>setTimeout(r, 400 - elapsed));
+    btn.classList.remove('loading'); btn.disabled = false;
+    btn.innerHTML = orig;
+  }
+}
+
+// ══════════════════════════════════════════
+// STORE LOCALE (in-memory + cache localStorage)
+// ══════════════════════════════════════════
+// Le scansioni vengono caricate in memoria a partire da "ts >= now - STORIA_GIORNI giorni".
+// Cache locale per offline graceful: chiave 'ep_alle_scans'.
+let scansioni = [];   // array di oggetti {id, ts, macchina, operatore, cliente, commessa, versione, bancale_num, bancale_tot, copie, tiratura, cp, pb, qr_raw}
+let scansioniLoaded = false;
+
+async function caricaScansioni(){
+  const minTs = Date.now() - (STORIA_GIORNI * 24 * 60 * 60 * 1000);
+  try{
+    const r = await _fetchTimeout(
+      SB_URL + '/rest/v1/allestimento_scansioni?select=*&ts=gte.' + minTs + '&order=ts.desc',
+      { headers: _sbH() }
+    );
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    scansioni = await r.json();
+    scansioniLoaded = true;
+    try{ localStorage.setItem('ep_alle_scans', JSON.stringify(scansioni)); }catch(e){ /* quota */ }
+  }catch(err){
+    console.warn('[caricaScansioni] cloud fail, uso cache:', err.message);
+    try{ scansioni = JSON.parse(localStorage.getItem('ep_alle_scans') || '[]'); }catch{ scansioni = []; }
+    toast('⚠ Offline: uso cache locale', 'err');
+  }
+}
+
+async function inserisciScansione(s){
+  // s: oggetto senza id, sarà restituito dal DB
+  try{
+    const r = await _retry('insert scansione', ()=>_fetchTimeout(
+      SB_URL + '/rest/v1/allestimento_scansioni',
+      { method:'POST',
+        headers: Object.assign({}, _sbH(), {'Prefer':'return=representation'}),
+        body: JSON.stringify(s) }
+    ));
+    const rows = await r.json();
+    const inserted = (rows && rows[0]) ? rows[0] : Object.assign({}, s, { id: Date.now() });
+    scansioni.unshift(inserted);
+    try{ localStorage.setItem('ep_alle_scans', JSON.stringify(scansioni)); }catch(e){}
+    return inserted;
+  }catch(err){
+    console.error('[inserisciScansione] FALLITO:', err);
+    toast('⚠ Salvataggio cloud fallito! Scansione NON registrata. Verifica rete e riprova.', 'err');
+    throw err;
+  }
+}
+
+async function eliminaScansione(id){
+  try{
+    await _retry('delete scansione', ()=>_fetchTimeout(
+      SB_URL + '/rest/v1/allestimento_scansioni?id=eq.' + id,
+      { method: 'DELETE', headers: _sbH() }
+    ));
+    scansioni = scansioni.filter(x => x.id !== id);
+    try{ localStorage.setItem('ep_alle_scans', JSON.stringify(scansioni)); }catch(e){}
+    return true;
+  }catch(err){
+    console.error('[eliminaScansione]:', err);
+    toast('⚠ Eliminazione cloud fallita', 'err');
+    return false;
+  }
+}
+
+// Carica anche lo storico etichette (per sapere il totale bancali atteso per commessa,
+// anche se la maggior parte del fabbisogno è già nel QR stesso)
+let etiCache = null;
+async function caricaEtichetteStorico(){
+  if(etiCache !== null) return etiCache;
+  try{
+    const r = await _fetchTimeout(SB_URL + '/rest/v1/etichette_storico?select=*&order=ts.desc', { headers: _sbH() });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const rows = await r.json();
+    etiCache = (rows||[]).map(x => ({
+      cliente: x.cliente, commessa: x.commessa,
+      copiePacco: x.copie_pacco, pacchiBancale: x.pacchi_bancale,
+      versioni: x.versioni || [], ts: x.ts
+    }));
+  }catch(err){
+    console.warn('[caricaEtichetteStorico]:', err.message);
+    etiCache = [];
+  }
+  return etiCache;
+}
+
+// ══════════════════════════════════════════
+// MACCHINA + OPERATORE (persistenza locale)
+// ══════════════════════════════════════════
+function getMacchinaAttiva(){ return localStorage.getItem('ep_alle_mach') || ''; }
+function setMacchinaAttiva(id){
+  if(id) localStorage.setItem('ep_alle_mach', id);
+  else   localStorage.removeItem('ep_alle_mach');
+  aggiornaUIMacchina();
+}
+function getOperatore(){ return localStorage.getItem('ep_alle_op') || ''; }
+function setOperatore(nome){
+  nome = (nome||'').trim();
+  if(nome) localStorage.setItem('ep_alle_op', nome);
+  else     localStorage.removeItem('ep_alle_op');
+  aggiornaUIOp();
+}
+function aggiornaUIMacchina(){
+  const m = getMacchinaAttiva();
+  const tbLbl = g('tbMachLbl');
+  const tbBtn = g('tbMach');
+  const heroLbl = g('heroMach');
+  const scanLbl = g('scanMach');
+  if(m){
+    tbLbl.textContent = m;
+    tbBtn.classList.remove('empty');
+    heroLbl.textContent = m;
+    if(scanLbl) scanLbl.textContent = 'Macchina: ' + m;
+  }else{
+    tbLbl.textContent = '— scegli —';
+    tbBtn.classList.add('empty');
+    heroLbl.textContent = '— nessuna macchina —';
+    if(scanLbl) scanLbl.textContent = '⚠ Scegli prima la macchina';
+  }
+}
+function aggiornaUIOp(){
+  const op = getOperatore();
+  const el = g('heroOp');
+  el.innerHTML = op
+    ? 'Operatore: <b style="color:white">'+ h(op) +'</b> · <a href="#" onclick="event.preventDefault();openMOp()" style="color:var(--gs);text-decoration:underline">cambia</a>'
+    : 'Operatore: nessuno · <a href="#" onclick="event.preventDefault();openMOp()" style="color:var(--gs);text-decoration:underline">imposta</a>';
+}
+
+// ══════════════════════════════════════════
+// MODALI
+// ══════════════════════════════════════════
+function openM(id){ g(id).classList.add('on'); }
+function closeM(id){ g(id).classList.remove('on'); }
+
+function openMMach(){
+  const m = getMacchinaAttiva();
+  const grid = g('machGrid');
+  grid.innerHTML = MACCHINE.map(x =>
+    '<div class="mach-chip ' + (x.id === m ? 'on' : '') + '" data-mid="' + h(x.id) + '" onclick="scegliMacchina(this.dataset.mid)">' +
+      '<div class="mach-chip-name">' + h(x.lbl) + '</div>' +
+      '<div class="mach-chip-sub">' + h(x.sub||'') + '</div>' +
+    '</div>'
+  ).join('');
+  openM('mMach');
+}
+function scegliMacchina(id){
+  setMacchinaAttiva(id);
+  closeM('mMach');
+  toast('Macchina: ' + id, 'ok');
+  // Re-render visualizzazioni che dipendono dalla macchina
+  renderStoria();
+}
+
+function openMOp(){
+  g('opInput').value = getOperatore();
+  openM('mOp');
+  setTimeout(()=>g('opInput').focus(), 100);
+}
+function salvaOp(){
+  setOperatore(g('opInput').value);
+  closeM('mOp');
+}
+
+// ══════════════════════════════════════════
+// NAVIGAZIONE
+// ══════════════════════════════════════════
+function goPage(id){
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.bn-item').forEach(b => b.classList.remove('on'));
+  g('pg-' + id).classList.add('on');
+  document.querySelectorAll('.bn-item[data-page="'+id+'"]').forEach(b => b.classList.add('on'));
+  // Refresh content
+  if(id === 'oggi')   renderOggi();
+  if(id === 'avanz')  renderAvanzamento();
+  if(id === 'storia') renderStoria();
+  if(id === 'stats')  renderStats();
+  // Scroll top
+  window.scrollTo({top:0, behavior:'instant'});
+}
+
+function tornaPortale(){ window.location.href = 'portale.html'; }
+
+// ══════════════════════════════════════════
+// QR PARSER (compatibile con format etichette EP)
+// ══════════════════════════════════════════
+function parseQR(raw){
+  raw = (raw || '').trim();
+  if(!raw) return null;
+  // Provo JSON-style come fallback
+  try{ const d = JSON.parse(raw); if(d.com || d.cli) return normalizzaQR(d); }catch{}
+  // Formato classico: "K1:V1; K2:V2; …"
+  if(raw.includes(':') && (raw.includes(';') || raw.includes('\n'))){
+    const map = {};
+    raw.split(/[;\n]/).forEach(part => {
+      const idx = part.indexOf(':');
+      if(idx < 0) return;
+      map[part.slice(0, idx).trim().toUpperCase()] = part.slice(idx + 1).trim();
+    });
+    const banParts = (map['B'] || '1/1').split('/');
+    const d = {
+      cli:    map['CLIENTE']  || '',
+      com:    map['COMMESSA'] || '',
+      ver:    map['VERSIONE'] || '',
+      tir:    parseInt(map['TIR'])  || 0,
+      cp:     parseInt(map['CP'])   || 0,
+      pb:     parseInt(map['PB'])   || 0,
+      ban:    parseInt(banParts[0]) || 1,
+      banTot: parseInt(banParts[1]) || 1,
+      cop:    parseInt(map['COPIE'])|| 0
+    };
+    if(d.com || d.cli) return d;
+  }
+  return null;
+}
+function normalizzaQR(d){
+  // Usato se QR è in formato JSON (per future evoluzioni)
+  return {
+    cli: d.cli || d.cliente || '',
+    com: d.com || d.commessa || '',
+    ver: d.ver || d.versione || '',
+    tir: parseInt(d.tir || d.tiratura) || 0,
+    cp:  parseInt(d.cp  || d.copiePacco) || 0,
+    pb:  parseInt(d.pb  || d.pacchiBancale) || 0,
+    ban: parseInt(d.ban || d.bancale) || 1,
+    banTot: parseInt(d.banTot || d.bancaliTot) || 1,
+    cop: parseInt(d.cop || d.copie) || 0
+  };
+}
+
+// ══════════════════════════════════════════
+// SCAN — entry point
+// ══════════════════════════════════════════
+async function scanQR(raw){
+  raw = (raw || '').trim();
+  if(!raw) return false;
+
+  // 1. Controllo macchina selezionata
+  const macchina = getMacchinaAttiva();
+  if(!macchina){
+    toast('⚠ Scegli prima la macchina (in alto a destra)', 'err');
+    closeScanner();
+    openMMach();
+    return false;
+  }
+
+  // 2. Parse
+  const d = parseQR(raw);
+  if(!d || !d.com){
+    toast('QR non riconosciuto — formato non valido', 'err');
+    return false;
+  }
+
+  // 3. Anti-doppio: questo bancale è già stato scansionato?
+  const giaScansionato = scansioni.find(x =>
+    x.commessa === d.com &&
+    (x.versione||'') === (d.ver||'') &&
+    x.bancale_num === d.ban
+  );
+  if(giaScansionato){
+    const quando = new Date(giaScansionato.ts);
+    const oraStr = pad(quando.getHours()) + ':' + pad(quando.getMinutes());
+    const giorno = isToday(giaScansionato.ts) ? 'oggi' : quando.toLocaleDateString('it-IT');
+    const conferma = confirm(
+      '⚠ Bancale già scansionato!\n\n' +
+      'Commessa: ' + d.com + (d.ver ? ' / ' + d.ver : '') + '\n' +
+      'Bancale: ' + d.ban + '/' + d.banTot + '\n\n' +
+      'Già registrato ' + giorno + ' alle ' + oraStr +
+      ' su macchina "' + giaScansionato.macchina + '"' +
+      (giaScansionato.operatore ? ' (op: ' + giaScansionato.operatore + ')' : '') + '.\n\n' +
+      'Vuoi registrarlo comunque? (es. correzione, ri-allestimento)'
+    );
+    if(!conferma) return false;
+  }
+
+  // 4. Costruisco oggetto e inserisco
+  const ts = Date.now();
+  const obj = {
+    ts: ts,
+    macchina: macchina,
+    operatore: getOperatore() || null,
+    cliente:   d.cli || null,
+    commessa:  d.com,
+    versione:  d.ver || null,
+    bancale_num: d.ban,
+    bancale_tot: d.banTot,
+    copie: d.cop || 0,
+    tiratura: d.tir || 0,
+    cp: d.cp || 0,
+    pb: d.pb || 0,
+    qr_raw: raw
+  };
+
+  try{
+    await inserisciScansione(obj);
+    // Successo
+    toast('✓ Bancale ' + d.ban + '/' + d.banTot + ' — ' + (d.ver || d.com), 'ok');
+    // Vibra (su mobile, se supportato)
+    if(navigator.vibrate) try{ navigator.vibrate(80); }catch{}
+    // Aggiorna UI
+    if(g('pg-oggi').classList.contains('on')) renderOggi(true);
+    return true;
+  }catch{
+    return false;
+  }
+}
+
+function isToday(ts){
+  const d = new Date(ts);
+  const now = new Date();
+  return d.getFullYear()===now.getFullYear() &&
+         d.getMonth()===now.getMonth() &&
+         d.getDate()===now.getDate();
+}
+function startOfDay(d){ const x=new Date(d); x.setHours(0,0,0,0); return x.getTime(); }
+
+// ══════════════════════════════════════════
+// SCANNER CAMERA (jsQR + BarcodeDetector)
+// ══════════════════════════════════════════
+let scanStream = null, scanRAF = null, barcodeDetector = null, scanCooldown = 0;
+
+async function openScanner(){
+  // Verifica macchina prima di aprire la fotocamera
+  if(!getMacchinaAttiva()){
+    toast('⚠ Scegli prima la macchina', 'err');
+    openMMach();
+    return;
+  }
+  if('BarcodeDetector' in window){
+    try{ barcodeDetector = new BarcodeDetector({ formats: ['qr_code'] }); }catch{ barcodeDetector = null; }
+  }
+  g('scanOverlay').classList.add('on');
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
+    });
+    scanStream = stream;
+    const vid = g('scanVideo');
+    vid.srcObject = stream;
+    await vid.play();
+    tickScan();
+  }catch(err){
+    closeScanner();
+    toast('Camera non disponibile: ' + err.message, 'err');
+  }
+}
+
+async function tickScan(){
+  const vid = g('scanVideo');
+  if(!scanStream || vid.readyState < 2){ scanRAF = requestAnimationFrame(tickScan); return; }
+  if(scanCooldown && Date.now() < scanCooldown){ scanRAF = requestAnimationFrame(tickScan); return; }
+  let decoded = null;
+  if(barcodeDetector){
+    try{
+      const codes = await barcodeDetector.detect(vid);
+      if(codes.length) decoded = codes[0].rawValue;
+    }catch{}
+  }
+  if(!decoded){
+    try{
+      const canvas = g('scanCanvas');
+      canvas.width  = vid.videoWidth;
+      canvas.height = vid.videoHeight;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
+      const img  = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'attemptBoth' });
+      if(code) decoded = code.data;
+    }catch{}
+  }
+  if(decoded){
+    // Cooldown: blocco letture per 1.5s, così non scansiona 10 volte di fila lo stesso QR
+    scanCooldown = Date.now() + 1500;
+    const res = await scanQR(decoded);
+    // NON chiudo lo scanner: l'operatore può scansionare un altro bancale subito dopo.
+    // Se vuole chiudere, preme il pulsante "Chiudi" in fondo.
+    void res;
+  }
+  scanRAF = requestAnimationFrame(tickScan);
+}
+
+function closeScanner(){
+  cancelAnimationFrame(scanRAF);
+  if(scanStream){ scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+  g('scanOverlay').classList.remove('on');
+  scanCooldown = 0;
+}
+
+// ══════════════════════════════════════════
+// PAGE: OGGI
+// ══════════════════════════════════════════
+function renderOggi(animateLast){
+  // Filtra scansioni di oggi
+  const oggi = scansioni.filter(s => isToday(s.ts));
+
+  // KPI
+  g('kpiBancali').textContent  = oggi.length;
+  g('kpiCopie').textContent    = fmt(oggi.reduce((a,s) => a + (s.copie||0), 0));
+  const commesseSet = new Set(oggi.map(s => s.commessa));
+  g('kpiCommesse').textContent = commesseSet.size;
+  // Rate: bancali nelle ultime 4h (più affidabile di "bancali/ora dall'inizio del turno")
+  const ora = Date.now();
+  const ultime4h = oggi.filter(s => (ora - s.ts) <= 4*60*60*1000);
+  if(ultime4h.length >= 2){
+    const span = (ora - Math.min(...ultime4h.map(s => s.ts))) / (60*60*1000);
+    const rate = span > 0.1 ? (ultime4h.length / span) : ultime4h.length;
+    g('kpiRate').textContent = rate.toFixed(1);
+  }else{
+    g('kpiRate').textContent = '—';
+  }
+
+  // Lista ultime scansioni (max 15)
+  const list = g('recentList');
+  if(!oggi.length){
+    list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📦</div>Nessuna scansione oggi.<br/>Premi <b>Scansiona bancale</b> per iniziare.</div>';
+    return;
+  }
+  const recenti = oggi.slice(0, 15);
+  list.innerHTML = recenti.map((s, idx) => renderScanRow(s, idx === 0 && animateLast)).join('');
+}
+
+function renderScanRow(s, fresh){
+  const d = new Date(s.ts);
+  const ora = pad(d.getHours()) + ':' + pad(d.getMinutes());
+  const banLbl = (s.bancale_num||'?') + '/' + (s.bancale_tot||'?');
+  return '<div class="scan-row ' + (fresh ? 'fresh' : '') + '">' +
+    '<div class="scan-num">' + pad(s.bancale_num||0) + '</div>' +
+    '<div class="scan-info">' +
+      '<div class="scan-com">' + h(s.commessa) + (s.cliente ? ' · <span style="color:var(--ink3);font-weight:500">' + h(s.cliente) + '</span>' : '') + '</div>' +
+      (s.versione ? '<div class="scan-ver">' + h(s.versione) + '</div>' : '') +
+      '<div class="scan-meta">Bancale ' + banLbl + ' · ' + fmt(s.copie) + ' copie' + (s.operatore ? ' · ' + h(s.operatore) : '') + '</div>' +
+    '</div>' +
+    '<div class="scan-right">' +
+      '<div class="scan-time">' + ora + '</div>' +
+      '<div class="scan-mach">' + h(s.macchina) + '</div>' +
+      '<button class="scan-x" onclick="apriScanModale(' + s.id + ')" title="Dettaglio / elimina">⋯</button>' +
+    '</div>' +
+  '</div>';
+}
+
+// ══════════════════════════════════════════
+// PAGE: AVANZAMENTO
+// ══════════════════════════════════════════
+function renderAvanzamento(){
+  const q = (g('avQ').value || '').toLowerCase().trim();
+  const filter = g('avFilter').value;
+  const list = g('avList');
+
+  // Aggrego per commessa
+  const byCom = {};
+  scansioni.forEach(s => {
+    const com = s.commessa;
+    if(!byCom[com]){
+      byCom[com] = { commessa: com, cliente: s.cliente || '', versioni: {}, lastTs: s.ts };
+    }
+    const c = byCom[com];
+    if(s.ts > c.lastTs) c.lastTs = s.ts;
+    if(!c.cliente && s.cliente) c.cliente = s.cliente;
+    const ver = s.versione || '(senza versione)';
+    if(!c.versioni[ver]){
+      c.versioni[ver] = { nome: ver, scansioni: [], banTot: s.bancale_tot || 0, tiratura: s.tiratura || 0 };
+    }
+    const v = c.versioni[ver];
+    v.scansioni.push(s);
+    if(s.bancale_tot && s.bancale_tot > v.banTot) v.banTot = s.bancale_tot;
+    if(s.tiratura && s.tiratura > v.tiratura) v.tiratura = s.tiratura;
+  });
+
+  let arr = Object.values(byCom);
+  // Calcolo completion per commessa
+  arr.forEach(c => {
+    let fatti = 0, totali = 0;
+    Object.values(c.versioni).forEach(v => {
+      // bancali unici fatti (basato su bancale_num)
+      const banSet = new Set(v.scansioni.map(s => s.bancale_num));
+      v.fatti  = banSet.size;
+      v.totali = v.banTot || banSet.size; // se non sappiamo il totale, assumiamo = fatti
+      fatti  += v.fatti;
+      totali += v.totali;
+    });
+    c.fatti  = fatti;
+    c.totali = totali;
+    c.done   = (totali > 0 && fatti >= totali);
+  });
+
+  // Filtri
+  if(filter === 'aperte') arr = arr.filter(c => !c.done);
+  if(filter === 'finite') arr = arr.filter(c =>  c.done);
+  if(q){
+    arr = arr.filter(c =>
+      (c.commessa || '').toLowerCase().includes(q) ||
+      (c.cliente  || '').toLowerCase().includes(q) ||
+      Object.keys(c.versioni).some(v => v.toLowerCase().includes(q))
+    );
+  }
+
+  // Ordina: aperte prima, per ultima attività desc
+  arr.sort((a,b) => {
+    if(a.done !== b.done) return a.done ? 1 : -1;
+    return b.lastTs - a.lastTs;
+  });
+
+  if(!arr.length){
+    list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div>Nessuna commessa da mostrare.</div>';
+    return;
+  }
+
+  list.innerHTML = arr.map(c => {
+    const versArr = Object.values(c.versioni).sort((a,b) => a.nome.localeCompare(b.nome));
+    const versHtml = versArr.map(v => {
+      const pct = v.totali > 0 ? Math.min(100, (v.fatti / v.totali) * 100) : 0;
+      const isDone = (v.totali > 0 && v.fatti >= v.totali);
+      return '<div class="ver-row">' +
+        '<div class="ver-row-head">' +
+          '<span class="ver-name">' + h(v.nome) + '</span>' +
+          '<span class="ver-cnt ' + (isDone?'done':'') + '">' + v.fatti + '/' + (v.totali||'?') + '</span>' +
+        '</div>' +
+        '<div class="ver-bar"><div class="ver-bar-fill ' + (isDone?'done':'') + '" style="width:' + pct.toFixed(1) + '%"></div></div>' +
+      '</div>';
+    }).join('');
+    const badge = c.done
+      ? '<span class="com-badge done">✓ FATTA</span>'
+      : (c.fatti > 0 ? '<span class="com-badge partial">IN CORSO</span>' : '<span class="com-badge">DA INIZIARE</span>');
+    return '<div class="com-card">' +
+      '<div class="com-head" data-com="' + h(c.commessa) + '" onclick="apriComModale(this.dataset.com)">' +
+        '<div class="com-head-l">' +
+          '<div class="com-title">' + h(c.commessa) + '</div>' +
+          '<div class="com-cli">' + h(c.cliente || '—') + ' · ' + badge + '</div>' +
+        '</div>' +
+        '<div class="com-prog-overall ' + (c.done?'done':'') + '">' + c.fatti + '/' + (c.totali||'?') + '</div>' +
+      '</div>' +
+      '<div class="com-versions">' + versHtml + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+// Modale dettaglio commessa
+function apriComModale(commessa){
+  const scans = scansioni.filter(s => s.commessa === commessa).sort((a,b) => a.ts - b.ts);
+  if(!scans.length){ closeM('mCom'); return; }
+  // Aggrego per versione
+  const byVer = {};
+  scans.forEach(s => {
+    const ver = s.versione || '(senza versione)';
+    if(!byVer[ver]){
+      byVer[ver] = { nome: ver, scans: [], banTot: s.bancale_tot || 0 };
+    }
+    byVer[ver].scans.push(s);
+    if(s.bancale_tot && s.bancale_tot > byVer[ver].banTot) byVer[ver].banTot = s.bancale_tot;
+  });
+
+  g('mComTitle').textContent = commessa;
+  const cliente = scans[0].cliente || '';
+  let body = '<div style="font-size:13px;color:var(--ink2);margin-bottom:4px"><b>' + h(cliente) + '</b></div>';
+
+  Object.values(byVer).sort((a,b) => a.nome.localeCompare(b.nome)).forEach(v => {
+    const banSet = new Map(); // bancale_num -> ultima scansione (la più recente vince)
+    v.scans.forEach(s => {
+      const prev = banSet.get(s.bancale_num);
+      if(!prev || s.ts > prev.ts) banSet.set(s.bancale_num, s);
+    });
+    const fatti = banSet.size;
+    const totali = v.banTot || fatti;
+    body += '<div style="margin-top:10px"><div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:6px">' +
+      h(v.nome) + ' · <span style="color:var(--ink3);font-family:var(--mono)">' + fatti + '/' + totali + '</span></div>';
+    body += '<div class="det-list">';
+    // Mostra TUTTI i bancali 1..totali, segnalando quelli mancanti
+    if(totali > 0){
+      for(let i = 1; i <= totali; i++){
+        const s = banSet.get(i);
+        if(s){
+          const d = new Date(s.ts);
+          const ora = pad(d.getHours()) + ':' + pad(d.getMinutes());
+          const gg  = isToday(s.ts) ? 'oggi' : d.toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit'});
+          body += '<div class="det-row done">' +
+            '<div class="det-num">' + pad(i) + '</div>' +
+            '<div class="det-info">' + h(s.operatore || '—') + '</div>' +
+            '<div class="det-time">' + gg + ' ' + ora + '</div>' +
+            '<div class="det-mach">' + h(s.macchina) + '</div>' +
+          '</div>';
+        }else{
+          body += '<div class="det-row missing">' +
+            '<div class="det-num">' + pad(i) + '</div>' +
+            '<div class="det-info" style="color:var(--red);font-weight:600">— mancante —</div>' +
+            '<div></div><div></div>' +
+          '</div>';
+        }
+      }
+    }else{
+      // Non sappiamo il totale, mostro solo i fatti
+      Array.from(banSet.values()).sort((a,b) => a.bancale_num - b.bancale_num).forEach(s => {
+        const d = new Date(s.ts);
+        const ora = pad(d.getHours()) + ':' + pad(d.getMinutes());
+        body += '<div class="det-row done">' +
+          '<div class="det-num">' + pad(s.bancale_num) + '</div>' +
+          '<div class="det-info">' + h(s.operatore || '—') + '</div>' +
+          '<div class="det-time">' + ora + '</div>' +
+          '<div class="det-mach">' + h(s.macchina) + '</div>' +
+        '</div>';
+      });
+    }
+    body += '</div></div>';
+  });
+  g('mComBody').innerHTML = body;
+  openM('mCom');
+}
+
+// ══════════════════════════════════════════
+// PAGE: CRONOLOGIA
+// ══════════════════════════════════════════
+function popolaFiltriCronologia(){
+  const machSel = g('storMach');
+  machSel.innerHTML = '<option value="">Tutte le macchine</option>' +
+    MACCHINE.map(m => '<option value="' + h(m.id) + '">' + h(m.lbl) + '</option>').join('');
+  const daySel = g('storDay');
+  daySel.innerHTML = '<option value="">Tutti i giorni</option>';
+  // Ultimi 30 giorni
+  const giorni = new Set();
+  scansioni.forEach(s => {
+    const d = new Date(s.ts);
+    giorni.add(d.toISOString().slice(0,10));
+  });
+  const arr = Array.from(giorni).sort().reverse();
+  arr.forEach(k => {
+    const d = new Date(k + 'T00:00:00');
+    const lbl = d.toLocaleDateString('it-IT', {weekday:'short', day:'2-digit', month:'short'});
+    daySel.innerHTML += '<option value="' + k + '">' + lbl + '</option>';
+  });
+}
+function renderStoria(){
+  const q = (g('storQ').value || '').toLowerCase().trim();
+  const mach = g('storMach').value;
+  const day  = g('storDay').value;
+
+  let arr = scansioni.slice();
+  if(mach) arr = arr.filter(s => s.macchina === mach);
+  if(day)  arr = arr.filter(s => new Date(s.ts).toISOString().slice(0,10) === day);
+  if(q){
+    arr = arr.filter(s =>
+      (s.commessa || '').toLowerCase().includes(q) ||
+      (s.cliente  || '').toLowerCase().includes(q) ||
+      (s.versione || '').toLowerCase().includes(q) ||
+      (s.operatore || '').toLowerCase().includes(q)
+    );
+  }
+
+  const list = g('storList');
+  if(!arr.length){
+    list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔍</div>Nessuna scansione corrisponde ai filtri.</div>';
+    return;
+  }
+
+  // Raggruppo per giorno
+  const byDay = {};
+  arr.forEach(s => {
+    const k = new Date(s.ts).toISOString().slice(0,10);
+    if(!byDay[k]) byDay[k] = [];
+    byDay[k].push(s);
+  });
+  const giorni = Object.keys(byDay).sort().reverse();
+  list.innerHTML = giorni.map(k => {
+    const d = new Date(k + 'T00:00:00');
+    const lbl = isToday(d.getTime())
+      ? 'Oggi · ' + d.toLocaleDateString('it-IT', {day:'2-digit', month:'long'})
+      : d.toLocaleDateString('it-IT', {weekday:'long', day:'2-digit', month:'long'});
+    const tot = byDay[k].length;
+    const copTot = byDay[k].reduce((a,s) => a + (s.copie||0), 0);
+    return '<div class="day-group">' +
+      '<div class="day-head">' + lbl + ' · ' + tot + ' bancali · ' + fmt(copTot) + ' copie</div>' +
+      byDay[k].map(s => renderScanRow(s, false)).join('') +
+    '</div>';
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+// MODALE DETTAGLIO/ELIMINA SCANSIONE
+// ══════════════════════════════════════════
+let _scanModId = null;
+function apriScanModale(id){
+  const s = scansioni.find(x => x.id === id);
+  if(!s) return;
+  _scanModId = id;
+  const d = new Date(s.ts);
+  const dt = d.toLocaleDateString('it-IT') + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+  g('mScanBody').innerHTML =
+    '<div style="font-size:13px;line-height:1.7">' +
+      '<div><b>Commessa:</b> ' + h(s.commessa) + '</div>' +
+      (s.cliente ? '<div><b>Cliente:</b> ' + h(s.cliente) + '</div>' : '') +
+      (s.versione ? '<div><b>Versione:</b> ' + h(s.versione) + '</div>' : '') +
+      '<div><b>Bancale:</b> ' + (s.bancale_num||'?') + '/' + (s.bancale_tot||'?') + '</div>' +
+      '<div><b>Copie:</b> ' + fmt(s.copie) + '</div>' +
+      '<div><b>Macchina:</b> ' + h(s.macchina) + '</div>' +
+      (s.operatore ? '<div><b>Operatore:</b> ' + h(s.operatore) + '</div>' : '') +
+      '<div style="margin-top:8px;color:var(--ink3);font-family:var(--mono);font-size:11px">' + dt + '</div>' +
+    '</div>';
+  openM('mScan');
+}
+async function confermaEliminaScan(){
+  if(_scanModId == null) return;
+  const s = scansioni.find(x => x.id === _scanModId);
+  if(!s) return;
+  if(!confirm('Eliminare la scansione del bancale ' + s.bancale_num + '/' + s.bancale_tot + ' (' + s.commessa + ')?\n\nL\'operazione è irreversibile.')) return;
+  const btn = g('mScanDel');
+  await asyncBtn(btn, async () => {
+    const ok = await eliminaScansione(_scanModId);
+    if(ok){
+      toast('Scansione eliminata', 'ok');
+      closeM('mScan');
+      _scanModId = null;
+      // Refresh page corrente
+      const active = document.querySelector('.page.on');
+      if(active){
+        const id = active.id.replace('pg-','');
+        if(id === 'oggi')   renderOggi();
+        if(id === 'avanz')  renderAvanzamento();
+        if(id === 'storia') renderStoria();
+        if(id === 'stats')  renderStats();
+      }
+    }
+  });
+}
+
+// ══════════════════════════════════════════
+// PAGE: STATS
+// ══════════════════════════════════════════
+function renderStats(){
+  const el = g('statsContent');
+  const now = Date.now();
+  const oggi = scansioni.filter(s => isToday(s.ts));
+  // Settimana corrente (lun-dom)
+  const d = new Date();
+  const dow = (d.getDay() + 6) % 7; // 0 = lun
+  const lun = startOfDay(new Date(d.getFullYear(), d.getMonth(), d.getDate() - dow));
+  const settimana = scansioni.filter(s => s.ts >= lun);
+  // Mese corrente
+  const mese0 = startOfDay(new Date(d.getFullYear(), d.getMonth(), 1));
+  const mese = scansioni.filter(s => s.ts >= mese0);
+
+  // Per macchina (settimana)
+  const perMach = {};
+  MACCHINE.forEach(m => { perMach[m.id] = { id: m.id, lbl: m.lbl, n: 0, copie: 0 }; });
+  settimana.forEach(s => {
+    const k = s.macchina;
+    if(!perMach[k]) perMach[k] = { id: k, lbl: k, n: 0, copie: 0 };
+    perMach[k].n++;
+    perMach[k].copie += (s.copie||0);
+  });
+  const machArr = Object.values(perMach).sort((a,b) => b.n - a.n);
+  const maxN = Math.max(1, ...machArr.map(m => m.n));
+
+  // Top commesse (settimana)
+  const perCom = {};
+  settimana.forEach(s => {
+    if(!perCom[s.commessa]) perCom[s.commessa] = { commessa: s.commessa, cliente: s.cliente||'', n: 0, copie: 0 };
+    perCom[s.commessa].n++;
+    perCom[s.commessa].copie += (s.copie||0);
+    if(!perCom[s.commessa].cliente && s.cliente) perCom[s.commessa].cliente = s.cliente;
+  });
+  const topCom = Object.values(perCom).sort((a,b) => b.n - a.n).slice(0, 5);
+
+  // Ultimi 7 giorni
+  const trend = [];
+  for(let i = 6; i >= 0; i--){
+    const day = new Date(d.getFullYear(), d.getMonth(), d.getDate() - i);
+    const k = day.toISOString().slice(0,10);
+    const cnt = scansioni.filter(s => new Date(s.ts).toISOString().slice(0,10) === k).length;
+    trend.push({ k: k, day: day, cnt: cnt });
+  }
+  const maxTrend = Math.max(1, ...trend.map(t => t.cnt));
+
+  el.innerHTML =
+    // KPI
+    '<div class="kpi-grid">' +
+      '<div class="kpi"><div class="kpi-accent pink"></div><div class="kpi-val">' + oggi.length + '</div><div class="kpi-lbl">Oggi</div></div>' +
+      '<div class="kpi"><div class="kpi-accent blue"></div><div class="kpi-val">' + settimana.length + '</div><div class="kpi-lbl">Settimana</div></div>' +
+      '<div class="kpi"><div class="kpi-accent ok"></div><div class="kpi-val">' + mese.length + '</div><div class="kpi-lbl">Mese</div></div>' +
+      '<div class="kpi"><div class="kpi-accent warn"></div><div class="kpi-val">' + fmt(mese.reduce((a,s)=>a+(s.copie||0),0)) + '</div><div class="kpi-lbl">Copie mese</div></div>' +
+    '</div>' +
+    // Trend ultimi 7gg
+    '<div class="card"><div class="card-body">' +
+      '<div class="sec-label">Ultimi 7 giorni</div>' +
+      '<div style="display:flex;align-items:flex-end;gap:6px;height:120px;padding-top:8px">' +
+        trend.map(t => {
+          const hgt = (t.cnt / maxTrend) * 100;
+          const giorno = t.day.toLocaleDateString('it-IT', {weekday:'short'}).replace('.','');
+          return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">' +
+            '<div style="font-size:10px;font-family:var(--mono);color:var(--ink2);font-weight:600">' + t.cnt + '</div>' +
+            '<div style="width:100%;background:var(--paper);border-radius:6px 6px 0 0;height:' + Math.max(2, hgt) + '%;background:linear-gradient(180deg,var(--g3) 0%,var(--g) 100%);min-height:4px"></div>' +
+            '<div style="font-size:10px;color:var(--ink3);text-transform:capitalize">' + giorno + '</div>' +
+          '</div>';
+        }).join('') +
+      '</div>' +
+    '</div></div>' +
+    // Per macchina (settimana)
+    '<div class="card"><div class="card-body">' +
+      '<div class="sec-label">Per macchina · settimana corrente</div>' +
+      (machArr.every(m => m.n === 0)
+        ? '<div style="color:var(--ink3);font-size:13px;padding:10px 0">Nessuna scansione questa settimana.</div>'
+        : machArr.map(m => {
+            const pct = (m.n / maxN) * 100;
+            return '<div style="margin-bottom:10px">' +
+              '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><b>' + h(m.lbl) + '</b><span style="font-family:var(--mono);color:var(--ink2)">' + m.n + ' bancali · ' + fmt(m.copie) + ' copie</span></div>' +
+              '<div class="ver-bar"><div class="ver-bar-fill" style="width:' + pct.toFixed(1) + '%;background:var(--pink)"></div></div>' +
+            '</div>';
+          }).join('')) +
+    '</div></div>' +
+    // Top commesse
+    (topCom.length
+      ? '<div class="card"><div class="card-body">' +
+          '<div class="sec-label">Top commesse · settimana</div>' +
+          topCom.map(c =>
+            '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--paper2);font-size:13px">' +
+              '<div style="min-width:0;flex:1"><b>' + h(c.commessa) + '</b><div style="font-size:11px;color:var(--ink3)">' + h(c.cliente||'—') + '</div></div>' +
+              '<div style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--ink2)">' + c.n + ' banc.<br><span style="color:var(--ink3);font-size:11px">' + fmt(c.copie) + ' cop.</span></div>' +
+            '</div>'
+          ).join('') +
+        '</div></div>'
+      : '');
+}
+
+// ══════════════════════════════════════════
+// BOOT
+// ══════════════════════════════════════════
+async function boot(){
+  aggiornaUIMacchina();
+  aggiornaUIOp();
+  // Mostra subito qualcosa dalla cache, poi sostituiscilo con dati cloud
+  try{
+    const cached = JSON.parse(localStorage.getItem('ep_alle_scans') || '[]');
+    if(cached.length){ scansioni = cached; renderOggi(); }
+  }catch{}
+  await caricaScansioni();
+  popolaFiltriCronologia();
+  renderOggi();
+  // Refresh leggero ogni 30s (così se più operatori scansionano in parallelo si aggiorna)
+  setInterval(async () => {
+    await caricaScansioni();
+    const active = document.querySelector('.page.on');
+    if(active){
+      const id = active.id.replace('pg-','');
+      if(id === 'oggi')   renderOggi();
+      if(id === 'avanz')  renderAvanzamento();
+      if(id === 'storia'){ popolaFiltriCronologia(); renderStoria(); }
+      if(id === 'stats')  renderStats();
+    }
+  }, 30000);
+}
+
+document.addEventListener('DOMContentLoaded', boot);
+
+// Espongo helper usati inline
+window.openMMach = openMMach;
+window.scegliMacchina = scegliMacchina;
+window.openMOp = openMOp;
+window.salvaOp = salvaOp;
+window.closeM = closeM;
+window.openM = openM;
+window.goPage = goPage;
+window.openScanner = openScanner;
+window.closeScanner = closeScanner;
+window.scanQR = scanQR;
+window.tornaPortale = tornaPortale;
+window.apriComModale = apriComModale;
+window.apriScanModale = apriScanModale;
+window.confermaEliminaScan = confermaEliminaScan;
+window.renderAvanzamento = renderAvanzamento;
+window.renderStoria = renderStoria;
+</script>
+</body>
+</html>
