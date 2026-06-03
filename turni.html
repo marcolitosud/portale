@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Turni — Effe Printing</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0F1117;--ink2:#3D4250;--ink3:#6B7280;
+  --paper:#F0F2F5;--paper2:#ECEAE2;--paper3:#DDDBD0;
+  --line:#E3E6EC;
+  --g:#1E3A5F;--g2:#059669;
+  --red:#B91C1C;--reds:#FEE2E2;
+  --r:8px;
+  --sans:'DM Sans',sans-serif;
+  --mono:'DM Mono',monospace;
+}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);font-size:15px}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 18px;height:56px;background:var(--g);color:#fff;position:sticky;top:0;z-index:50}
+.topbar *{color:#fff}
+.tbl{display:flex;align-items:center;gap:10px}
+.tbico{width:34px;height:34px;background:rgba(255,255,255,.15);border-radius:9px;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center}
+.tbt{font-size:15px;font-weight:700}
+.tbt span{font-weight:400;opacity:.7}
+.nav-tabs{display:flex;gap:2px;background:rgba(255,255,255,.12);border-radius:var(--r);padding:3px}
+.nav-tab{padding:6px 14px;border-radius:6px;border:none;background:none;font-size:13px;font-family:var(--sans);cursor:pointer;font-weight:500;opacity:.8}
+.nav-tab.on{background:#fff;opacity:1}
+.nav-tab.on, .nav-tab.on *{color:var(--g)}
+#syncIcon{font-size:16px;margin-left:4px}
+#btnSalva{margin-left:8px;background:var(--g2);border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer}
+#btnSalva:disabled{opacity:.7;cursor:default}
+.tb-portale{background:none;border:1px solid rgba(255,255,255,.4);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer}
+.page{display:none;padding:18px}
+.page.on{display:block}
+.bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:10px 14px;margin-bottom:12px}
+.rep-label{font-size:12px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-right:4px}
+.rep-btn,.vt-btn{padding:7px 14px;border-radius:6px;border:1.5px solid var(--line);background:#fff;font-size:13px;font-family:var(--sans);font-weight:500;color:var(--ink3);cursor:pointer}
+.rep-btn.on,.vt-btn.on{border-color:var(--g);background:var(--g);color:#fff}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 14px;border-radius:var(--r);border:1px solid var(--line);background:#fff;font-size:13px;font-family:var(--sans);font-weight:600;cursor:pointer;color:var(--ink2)}
+.btn-primary{background:var(--g);color:#fff;border-color:var(--g)}
+.range{flex:1;text-align:center;font-size:15px;font-weight:700;min-width:160px}
+.grid-wrap{overflow-x:auto;border-radius:var(--r);border:1px solid var(--line);background:#fff}
+table.grid{border-collapse:collapse;font-size:13px;width:100%;min-width:max-content}
+table.grid th{background:#F7F8FA;padding:8px 6px;font-weight:600;color:var(--ink3);text-align:center;border-bottom:1px solid var(--line);white-space:nowrap;font-size:11px}
+table.grid th.emp-col{text-align:left;min-width:200px;padding-left:14px}
+table.grid td{border-bottom:1px solid var(--line);text-align:center;padding:4px;vertical-align:middle}
+table.grid td.emp-name{font-weight:600;text-align:left;padding:8px 14px;white-space:nowrap}
+table.grid td.emp-name small{display:block;font-size:10px;color:var(--ink3);font-weight:400;margin-top:1px}
+.dayhead .dn{font-size:11px;font-weight:600;text-transform:uppercase}
+.dayhead .dd{font-size:15px;font-weight:700;font-family:var(--mono)}
+.dayhead .dm{font-size:9px;color:var(--ink3)}
+.dayhead.fest .dd,.dayhead.fest .dn{color:var(--red)}
+.cell{width:38px;height:38px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--mono);display:flex;align-items:center;justify-content:center;margin:auto}
+.cell:hover{opacity:.82}
+.tot{font-family:var(--mono);font-weight:700;font-size:12px;color:var(--ink2);min-width:26px}
+.sq-row td{background:#F2F4F8;padding:8px 14px!important;text-align:left;border-top:2px solid var(--g)}
+.sq-row .sq-name{font-weight:700;font-size:13px;color:var(--g)}
+.sq-row .sq-count{font-size:11px;color:var(--ink3);margin-left:6px}
+.s-1{background:#bbf7d0;color:#065f46}
+.s-2{background:#bfdbfe;color:#1e40af}
+.s-3{background:#e9d5ff;color:#5b21b6}
+.s-R{background:#f1f5f9;color:#64748b}
+.s-F{background:#fef9c3;color:#854d0e}
+.s-M{background:#fee2e2;color:#991b1b}
+.s-C{background:#fed7aa;color:#7c2d12}
+.s-P{background:#e0f2fe;color:#075985}
+.s-Fe{background:#fce7f3;color:#9f1239}
+.s-empty{background:var(--paper2);color:var(--ink3)}
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center}
+.ov.on{display:flex}
+.modal{background:#fff;border-radius:14px;padding:22px;width:92%;max-width:380px}
+.mh{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.mht{font-size:16px;font-weight:700}
+.mhx{width:30px;height:30px;border:none;background:var(--paper2);border-radius:6px;cursor:pointer;font-size:16px}
+.stati-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stato-opt{padding:12px 4px;border-radius:8px;text-align:center;cursor:pointer;font-weight:700;font-size:13px;border:2px solid transparent}
+.stato-opt small{display:block;font-size:9px;font-weight:500;margin-top:2px}
+.stato-opt.sel{border-color:var(--g)}
+.modal .btn-clear{width:100%;margin-top:10px;padding:9px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;font-family:var(--sans);font-size:13px;color:var(--ink3)}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:#1a1a1a;color:#fff;padding:11px 20px;border-radius:10px;font-size:13px;font-weight:500;opacity:0;transition:all .3s;z-index:999;pointer-events:none}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{background:#065f46}
+.toast.err{background:#991b1b}
+.summary-table{width:100%;border-collapse:collapse;font-size:13px;background:#fff}
+.summary-table th{background:#F7F8FA;padding:9px 12px;text-align:left;font-weight:600;color:var(--ink3);border-bottom:1px solid var(--line)}
+.summary-table td{padding:8px 12px;border-bottom:1px solid var(--line)}
+.summary-table td.c{text-align:center;font-family:var(--mono)}
+.emp-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.emp-avatar{width:40px;height:40px;border-radius:50%;background:var(--g);color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+#loadingOverlay{display:none;position:fixed;inset:0;background:rgba(255,255,255,.92);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.spinner{width:40px;height:40px;border:3px solid var(--line);border-top-color:var(--g);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="tbl">
+    <div class="tbico">EP</div>
+    <span class="tbt">Presenze <span>& Turni</span></span>
+    <span id="syncIcon" title="Stato sincronizzazione">☁️</span>
+    <button id="btnSalva" onclick="salvaTurni()">💾 Salva turni</button>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab on" id="tab-btn-presenze" onclick="goTab('presenze')">📅 Presenze</button>
+    <button class="nav-tab" id="tab-btn-riepilogo" onclick="goTab('riepilogo')">📊 Riepilogo</button>
+    <button class="nav-tab" id="tab-btn-anagrafica" onclick="goTab('anagrafica')">👥 Anagrafica</button>
+  </div>
+  <button class="tb-portale" onclick="window.location.href='index.html'">← Portale</button>
+</div>
+
+<div class="page on" id="page-presenze">
+  <div class="bar" id="repartoBar"><span class="rep-label">🏭 Reparto:</span></div>
+  <div class="bar">
+    <button class="vt-btn" id="vt-month" onclick="setView('month')">📅 Mese</button>
+    <button class="vt-btn on" id="vt-week" onclick="setView('week')">7️⃣ Settimana</button>
+  </div>
+  <div class="bar">
+    <button class="btn" onclick="navPrev()">◀</button>
+    <button class="btn" onclick="navNext()">▶</button>
+    <input type="week" id="weekPicker" onchange="onWeekPicker()" style="display:none"/>
+    <input type="month" id="monthPicker" onchange="onMonthPicker()" style="display:none"/>
+    <span class="range" id="rangeLabel">—</span>
+    <button class="btn" onclick="goToday()">Oggi</button>
+  </div>
+  <div class="grid-wrap"><table class="grid"><thead id="gridHead"></thead><tbody id="gridBody"></tbody></table></div>
+</div>
+
+<div class="page" id="page-riepilogo">
+  <div class="bar">
+    <span class="rep-label">📊 Riepilogo mese:</span>
+    <input type="month" id="riepPicker" onchange="renderRiepilogo()"/>
+    <button class="btn" onclick="exportCSV()">⬇ Esporta CSV</button>
+  </div>
+  <div class="grid-wrap">
+    <table class="summary-table">
+      <thead><tr>
+        <th>Dipendente</th><th>Squadra</th>
+        <th>1</th><th>2</th><th>3</th><th>R</th><th>F</th><th>M</th><th>C</th><th>P</th><th>Fe</th><th>Tot turni</th>
+      </tr></thead>
+      <tbody id="riepBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="page" id="page-anagrafica">
+  <div class="bar"><span class="rep-label">👥 Dipendenti attivi</span></div>
+  <div id="anagBody"></div>
+</div>
+
+<div class="ov" id="mStato">
+  <div class="modal">
+    <div class="mh"><div class="mht" id="mStatoTitle">Imposta turno</div><button class="mhx" onclick="closeModal()">✕</button></div>
+    <div class="stati-grid" id="statiGrid"></div>
+    <button class="btn-clear" onclick="applyStato('')">🗑 Cancella turno</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="loadingOverlay"><div class="spinner"></div><div id="loadingMsg" style="font-weight:600;color:var(--ink2)">Caricamento…</div></div>
+
+<script src="sb.js"></script>
+<script>
+// ═══ AUTH GUARD ═══
+// Identico al meccanismo originale: l'accesso è consentito solo se esiste una
+// sessione valida creata dal portale (ep_sess3_turni). Senza, o se scaduta da
+// oltre 90 giorni, si viene rimandati al portale. Questo blocca l'accesso
+// diretto a turni.html senza passare dal login del portale.
+(function(){
+  try{
+    var raw = localStorage.getItem('ep_sess3_turni');
+    if(!raw){ window.location.replace('index.html'); return; }
+    var sess = JSON.parse(raw);
+    var oreMax = 90*24*60*60*1000;
+    if(Date.now()-sess.ts >= oreMax){ window.location.replace('index.html'); return; }
+  }catch(e){ window.location.replace('index.html'); return; }
+})();
+
+var STATI = {
+  '1':{lbl:'Mattino', cls:'s-1'},'2':{lbl:'Pomerig.',cls:'s-2'},'3':{lbl:'Notte',cls:'s-3'},
+  'R':{lbl:'Riposo',cls:'s-R'},'F':{lbl:'Ferie',cls:'s-F'},'M':{lbl:'Malattia',cls:'s-M'},
+  'C':{lbl:'CIG',cls:'s-C'},'P':{lbl:'Permesso',cls:'s-P'},'Fe':{lbl:'Festivo',cls:'s-Fe'}
+};
+var REPARTI = [
+  {id:'produzione',lbl:'⚙️ Produzione'},{id:'manutenzione',lbl:'🔧 Manutenzione'},
+  {id:'logistica',lbl:'🚚 Logistica'},{id:'allestimento',lbl:'📦 Allestimento'},{id:'ctp',lbl:'🖥 CTP'}
+];
+var store = { anagrafica:[], squadre:[], presenze:{}, meseDip:{} };
+var cloudLoaded=false, saving=false;
+var curReparto='produzione', curView='week', curMonday=mondayOf(new Date()), curYM=ymOf(new Date()), editCell=null;
+
+function sbHeaders(){ return {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'}; }
+async function sbGetAll(table, params){
+  var PAGE=1000, offset=0, all=[];
+  while(true){
+    var qs = params ? '?'+params : '';
+    var headers = Object.assign(sbHeaders(),{'Range-Unit':'items','Range':offset+'-'+(offset+PAGE-1)});
+    var r = await fetch(SB_URL+'/rest/v1/'+table+qs,{headers:headers});
+    if(!r.ok && r.status!==206) throw new Error('sbGet '+table+': '+r.status);
+    var chunk = await r.json();
+    if(!Array.isArray(chunk)) return chunk;
+    all = all.concat(chunk);
+    if(chunk.length < PAGE) break;
+    offset += PAGE;
+    if(offset > 200000) break;
+  }
+  return all;
+}
+async function sbUpsert(table, rows, conflict){
+  if(!Array.isArray(rows)) rows=[rows];
+  if(!rows.length) return;
+  var qs = conflict ? '?on_conflict='+conflict : '';
+  var r = await fetch(SB_URL+'/rest/v1/'+table+qs,{method:'POST',headers:Object.assign(sbHeaders(),{'Prefer':'resolution=merge-duplicates'}),body:JSON.stringify(rows)});
+  if(!r.ok){ var e=await r.text(); throw new Error('sbUpsert '+table+': '+e); }
+}
+
+function mondayOf(date){ var d=new Date(date); var day=d.getDay(); var diff=(day===0?-6:1-day); d.setDate(d.getDate()+diff); d.setHours(0,0,0,0); return d; }
+function ymOf(date){ return date.getFullYear()+'-'+pad(date.getMonth()+1); }
+function pad(n){ return (n<10?'0':'')+n; }
+function isoWeek(date){ var d=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate())); var dn=d.getUTCDay()||7; d.setUTCDate(d.getUTCDate()+4-dn); var ys=new Date(Date.UTC(d.getUTCFullYear(),0,1)); var wn=Math.ceil((((d-ys)/86400000)+1)/7); return d.getUTCFullYear()+'-W'+pad(wn); }
+function isoWeekToMonday(val){ var m=/^(\d{4})-W(\d{2})$/.exec(val); if(!m) return mondayOf(new Date()); var y=+m[1],w=+m[2]; var simple=new Date(y,0,1+(w-1)*7); return mondayOf(simple); }
+var MESI=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+var MESI_SHORT=['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+var GIORNI=['DOM','LUN','MAR','MER','GIO','VEN','SAB'];
+
+function rk(reparto,ym){ return reparto+'_'+ym; }
+function presOf(reparto,ym){ return store.presenze[rk(reparto,ym)]||{}; }
+function getStato(reparto,ym,dipId,giorno){ var p=store.presenze[rk(reparto,ym)]; return (p&&p[dipId]&&p[dipId][giorno])||''; }
+function setStatoMem(reparto,ym,dipId,giorno,stato){ var k=rk(reparto,ym); if(!store.presenze[k]) store.presenze[k]={}; if(!store.presenze[k][dipId]) store.presenze[k][dipId]={}; if(stato==='') delete store.presenze[k][dipId][giorno]; else store.presenze[k][dipId][giorno]=stato; }
+function dipName(dipId){ var a=store.anagrafica.find(function(x){return x.id===dipId;}); if(!a) return dipId; return a.cognome+(a.nome?' '+a.nome:''); }
+function dipRuolo(dipId){ var a=store.anagrafica.find(function(x){return x.id===dipId;}); return a?(a.ruolo||''):''; }
+function squadreReparto(reparto){ if(reparto!=='produzione') return []; return store.squadre.slice().sort(function(a,b){ return a.nome<b.nome?-1:1; }); }
+function dipLiberiConPresenze(reparto,ym){ var inSq={}; squadreReparto(reparto).forEach(function(s){ (s.membri||[]).forEach(function(d){ inSq[d]=true; }); }); var p=presOf(reparto,ym); return Object.keys(p).filter(function(dipId){ return !inSq[dipId]; }); }
+
+async function loadAll(){
+  showOverlay('Caricamento dati…'); setSync('saving');
+  try {
+    var ana = await sbGetAll('anagrafica','select=*&order=cognome.asc');
+    store.anagrafica = (ana||[]).map(function(d){ return {id:d.id,matricola:d.matricola||'',cognome:d.cognome||'',nome:d.nome||'',ruolo:d.ruolo||d.ruolo_custom||'',attivo:d.attivo!==false,azienda:d.azienda||''}; });
+    var sq = await sbGetAll('squadre','select=*,squadra_membri(dip_id)');
+    store.squadre = (sq||[]).map(function(s){ return {id:s.id,nome:s.nome,colore:s.colore||'#1E3A5F',membri:(s.squadra_membri||[]).map(function(m){return m.dip_id;})}; });
+    var pr = await sbGetAll('presenze','select=*');
+    store.presenze = {};
+    (pr||[]).forEach(function(p){ var ym=p.anno+'-'+pad(p.mese); var k=rk(p.reparto,ym); if(!store.presenze[k]) store.presenze[k]={}; if(!store.presenze[k][p.dip_id]) store.presenze[k][p.dip_id]={}; store.presenze[k][p.dip_id][p.giorno]=p.stato; });
+    var md = await sbGetAll('mese_dip','select=*&order=sort_order.asc');
+    store.meseDip = {};
+    (md||[]).forEach(function(r){ var ym=r.anno+'-'+pad(r.mese); var k=rk(r.reparto,ym); if(!store.meseDip[k]) store.meseDip[k]=[]; store.meseDip[k].push(r); });
+    cloudLoaded=true; setSync('ok'); hideOverlay();
+    console.log('[turni] Caricate '+countPresenze()+' presenze in memoria (paginazione attiva).');
+  } catch(e){ console.error('Errore caricamento:',e); setSync('err'); hideOverlay(); toast('Errore caricamento dati dal cloud','err'); }
+}
+function countPresenze(){ var t=0; Object.keys(store.presenze).forEach(function(k){ Object.keys(store.presenze[k]).forEach(function(d){ t+=Object.keys(store.presenze[k][d]).length; }); }); return t; }
+
+async function salvaTurni(){
+  if(!cloudLoaded){ toast('Dati non ancora caricati','err'); return; }
+  if(saving) return;
+  saving=true;
+  var btn=document.getElementById('btnSalva'); btn.disabled=true; btn.textContent='⏳ Salvataggio…'; setSync('saving');
+  try {
+    var rows = collectRows();
+    for(var i=0;i<rows.length;i+=500){ await sbUpsert('presenze', rows.slice(i,i+500), 'reparto,dip_id,anno,mese,giorno'); }
+    setSync('ok'); btn.textContent='✅ Salvato'; btn.style.background='#16a34a'; toast('Turni salvati sul cloud ✅','ok');
+    setTimeout(function(){ btn.textContent='💾 Salva turni'; btn.style.background=''; btn.disabled=false; },1600);
+  } catch(e){ console.error('Errore salvataggio:',e); setSync('err'); btn.textContent='⚠️ Errore — riprova'; btn.style.background='#dc2626'; btn.disabled=false; toast('Salvataggio FALLITO — i turni NON sono salvati. Riprova.','err'); setTimeout(function(){ btn.textContent='💾 Salva turni'; btn.style.background=''; },2600); }
+  finally { saving=false; }
+}
+function collectRows(){
+  var rows=[];
+  Object.keys(store.presenze).forEach(function(k){
+    var idx = k.indexOf('_');
+    var reparto = k.substring(0,idx);
+    var ym = k.substring(idx+1);
+    var anno=+ym.split('-')[0], mese=+ym.split('-')[1];
+    var byDip=store.presenze[k];
+    Object.keys(byDip).forEach(function(dipId){
+      Object.keys(byDip[dipId]).forEach(function(g){
+        var st=byDip[dipId][g];
+        if(st) rows.push({reparto:reparto,dip_id:dipId,anno:anno,mese:mese,giorno:+g,stato:st});
+      });
+    });
+  });
+  return rows;
+}
+
+function goTab(t){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
+  document.querySelectorAll('.nav-tab').forEach(function(b){b.classList.remove('on');});
+  document.getElementById('page-'+t).classList.add('on');
+  document.getElementById('tab-btn-'+t).classList.add('on');
+  if(t==='riepilogo') renderRiepilogo();
+  if(t==='anagrafica') renderAnagrafica();
+}
+function buildRepartoBar(){
+  var bar=document.getElementById('repartoBar');
+  REPARTI.forEach(function(r){ var b=document.createElement('button'); b.className='rep-btn'+(r.id===curReparto?' on':''); b.id='rep-'+r.id; b.textContent=r.lbl; b.onclick=function(){ setReparto(r.id); }; bar.appendChild(b); });
+}
+function setReparto(rep){ curReparto=rep; document.querySelectorAll('.rep-btn').forEach(function(b){b.classList.remove('on');}); var el=document.getElementById('rep-'+rep); if(el) el.classList.add('on'); renderGrid(); }
+function setView(v){ curView=v; document.getElementById('vt-week').classList.toggle('on',v==='week'); document.getElementById('vt-month').classList.toggle('on',v==='month'); document.getElementById('weekPicker').style.display=v==='week'?'':'none'; document.getElementById('monthPicker').style.display=v==='month'?'':'none'; renderGrid(); }
+function navPrev(){ if(curView==='week'){ curMonday.setDate(curMonday.getDate()-7); curMonday=new Date(curMonday); } else { var d=new Date(curYM+'-01'); d.setMonth(d.getMonth()-1); curYM=ymOf(d); } renderGrid(); }
+function navNext(){ if(curView==='week'){ curMonday.setDate(curMonday.getDate()+7); curMonday=new Date(curMonday); } else { var d=new Date(curYM+'-01'); d.setMonth(d.getMonth()+1); curYM=ymOf(d); } renderGrid(); }
+function goToday(){ curMonday=mondayOf(new Date()); curYM=ymOf(new Date()); renderGrid(); }
+function onWeekPicker(){ curMonday=isoWeekToMonday(document.getElementById('weekPicker').value); renderGrid(); }
+function onMonthPicker(){ curYM=document.getElementById('monthPicker').value; renderGrid(); }
+
+function renderGrid(){ if(curView==='week') renderWeek(); else renderMonth(); }
+
+function renderWeek(){
+  var days=[]; for(var i=0;i<7;i++){ var d=new Date(curMonday); d.setDate(d.getDate()+i); days.push(d); }
+  document.getElementById('weekPicker').value=isoWeek(curMonday);
+  var from=days[0],to=days[6];
+  document.getElementById('rangeLabel').textContent=from.getDate()+' '+MESI_SHORT[from.getMonth()]+' — '+to.getDate()+' '+MESI_SHORT[to.getMonth()]+' '+to.getFullYear();
+  var head='<tr><th class="emp-col">Dipendente</th>';
+  days.forEach(function(d){ var fest=d.getDay()===0||d.getDay()===6; head+='<th class="dayhead'+(fest?' fest':'')+'"><div class="dn">'+GIORNI[d.getDay()]+'</div><div class="dd">'+d.getDate()+'</div><div class="dm">'+MESI_SHORT[d.getMonth()]+'</div></th>'; });
+  ['1','2','3','R','F','M','C','P','Fe'].forEach(function(s){ head+='<th>'+s+'</th>'; });
+  head+='</tr>';
+  document.getElementById('gridHead').innerHTML=head;
+  var body=''; var squadre=squadreReparto(curReparto);
+  if(squadre.length){
+    squadre.forEach(function(sq){ body+=sqHeaderRow(sq.nome,(sq.membri||[]).length,sq.colore); (sq.membri||[]).forEach(function(dipId){ body+=weekDipRow(dipId,days); }); });
+    var liberi=dipLiberiConPresenze(curReparto,ymOf(curMonday));
+    if(liberi.length){ body+=sqHeaderRow('Altri',liberi.length,'#6B7280'); liberi.forEach(function(dipId){ body+=weekDipRow(dipId,days); }); }
+  } else {
+    var ym=ymOf(curMonday); var conPres=Object.keys(presOf(curReparto,ym));
+    var lista=conPres.length?conPres:store.anagrafica.filter(function(a){return a.attivo;}).map(function(a){return a.id;});
+    lista.forEach(function(dipId){ body+=weekDipRow(dipId,days); });
+  }
+  if(!body) body='<tr><td colspan="17" style="padding:24px;text-align:center;color:var(--ink3)">Nessun dato per questo reparto/periodo.</td></tr>';
+  document.getElementById('gridBody').innerHTML=body;
+}
+function sqHeaderRow(nome,n,colore){ return '<tr class="sq-row"><td colspan="17"><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:'+(colore||'#1E3A5F')+';margin-right:7px;vertical-align:middle"></span><span class="sq-name">'+esc(nome)+'</span><span class="sq-count">'+n+' operatori</span></td></tr>'; }
+function weekDipRow(dipId,days){
+  var row='<tr><td class="emp-name">'+esc(dipName(dipId)); var ruolo=dipRuolo(dipId); if(ruolo) row+='<small>'+esc(ruolo)+'</small>'; row+='</td>';
+  var c={t1:0,t2:0,t3:0,R:0,F:0,M:0,C:0,P:0,Fe:0};
+  days.forEach(function(d){
+    var ym=ymOf(d); var giorno=d.getDate(); var stato=getStato(curReparto,ym,dipId,giorno);
+    var cls=(stato&&STATI[stato])?STATI[stato].cls:'s-empty'; var label=stato||'·';
+    if(stato==='1')c.t1++;else if(stato==='2')c.t2++;else if(stato==='3')c.t3++;else if(stato==='R')c.R++;else if(stato==='F')c.F++;else if(stato==='M')c.M++;else if(stato==='C')c.C++;else if(stato==='P')c.P++;else if(stato==='Fe')c.Fe++;
+    row+='<td><button class="cell '+cls+'" onclick="openStato(\''+dipId+'\',\''+ym+'\','+giorno+')">'+esc(label)+'</button></td>';
+  });
+  var z='<span style="color:var(--paper3)">·</span>';
+  row+='<td class="tot">'+(c.t1||z)+'</td><td class="tot">'+(c.t2||z)+'</td><td class="tot">'+(c.t3||z)+'</td><td class="tot">'+(c.R||z)+'</td><td class="tot">'+(c.F||z)+'</td><td class="tot">'+(c.M||z)+'</td><td class="tot">'+(c.C||z)+'</td><td class="tot">'+(c.P||z)+'</td><td class="tot">'+(c.Fe||z)+'</td></tr>';
+  return row;
+}
+function renderMonth(){
+  document.getElementById('monthPicker').value=curYM;
+  var d0=new Date(curYM+'-01'); var year=d0.getFullYear(),month=d0.getMonth();
+  var daysInMonth=new Date(year,month+1,0).getDate();
+  document.getElementById('rangeLabel').textContent=MESI[month]+' '+year;
+  var head='<tr><th class="emp-col">Dipendente</th>';
+  for(var dd=1;dd<=daysInMonth;dd++){ var dt=new Date(year,month,dd); var fest=dt.getDay()===0||dt.getDay()===6; head+='<th class="dayhead'+(fest?' fest':'')+'"><div class="dd">'+dd+'</div><div class="dn">'+GIORNI[dt.getDay()].substring(0,2)+'</div></th>'; }
+  head+='</tr>'; document.getElementById('gridHead').innerHTML=head;
+  var body=''; var squadre=squadreReparto(curReparto);
+  function monthDipRow(dipId){ var r='<tr><td class="emp-name">'+esc(dipName(dipId))+'</td>'; for(var dd=1;dd<=daysInMonth;dd++){ var stato=getStato(curReparto,curYM,dipId,dd); var cls=(stato&&STATI[stato])?STATI[stato].cls:'s-empty'; r+='<td><button class="cell '+cls+'" style="width:30px;height:30px;font-size:11px" onclick="openStato(\''+dipId+'\',\''+curYM+'\','+dd+')">'+esc(stato||'·')+'</button></td>'; } return r+'</tr>'; }
+  if(squadre.length){
+    squadre.forEach(function(sq){ body+='<tr class="sq-row"><td colspan="'+(daysInMonth+1)+'"><span class="sq-name">'+esc(sq.nome)+'</span><span class="sq-count">'+(sq.membri||[]).length+' operatori</span></td></tr>'; (sq.membri||[]).forEach(function(dipId){ body+=monthDipRow(dipId); }); });
+    var liberi=dipLiberiConPresenze(curReparto,curYM);
+    if(liberi.length){ body+='<tr class="sq-row"><td colspan="'+(daysInMonth+1)+'"><span class="sq-name">Altri</span></td></tr>'; liberi.forEach(function(dipId){ body+=monthDipRow(dipId); }); }
+  } else {
+    var conPres=Object.keys(presOf(curReparto,curYM));
+    var lista=conPres.length?conPres:store.anagrafica.filter(function(a){return a.attivo;}).map(function(a){return a.id;});
+    lista.forEach(function(dipId){ body+=monthDipRow(dipId); });
+  }
+  if(!body) body='<tr><td colspan="'+(daysInMonth+1)+'" style="padding:24px;text-align:center;color:var(--ink3)">Nessun dato.</td></tr>';
+  document.getElementById('gridBody').innerHTML=body;
+}
+
+function openStato(dipId,ym,giorno){
+  editCell={dipId:dipId,ym:ym,giorno:giorno};
+  var cur=getStato(curReparto,ym,dipId,giorno);
+  document.getElementById('mStatoTitle').textContent=dipName(dipId);
+  var grid=document.getElementById('statiGrid'); grid.innerHTML='';
+  Object.keys(STATI).forEach(function(s){ var o=document.createElement('div'); o.className='stato-opt '+STATI[s].cls+(cur===s?' sel':''); o.innerHTML=s+'<small>'+STATI[s].lbl+'</small>'; o.onclick=function(){ applyStato(s); }; grid.appendChild(o); });
+  document.getElementById('mStato').classList.add('on');
+}
+function applyStato(s){ if(!editCell) return; setStatoMem(curReparto,editCell.ym,editCell.dipId,editCell.giorno,s); closeModal(); renderGrid(); scheduleAutosave(); }
+function closeModal(){ document.getElementById('mStato').classList.remove('on'); }
+
+var _autosaveTimer=null;
+function scheduleAutosave(){ clearTimeout(_autosaveTimer); setSync('saving'); _autosaveTimer=setTimeout(function(){ salvaTurniSilent(); },1500); }
+async function salvaTurniSilent(){
+  if(!cloudLoaded||saving) return;
+  saving=true;
+  try { var rows=collectRows(); for(var i=0;i<rows.length;i+=500){ await sbUpsert('presenze',rows.slice(i,i+500),'reparto,dip_id,anno,mese,giorno'); } setSync('ok'); }
+  catch(e){ console.warn('Autosave fallito:',e); setSync('err'); toast('Autosave fallito — usa 💾 Salva turni','err'); }
+  finally { saving=false; }
+}
+
+function renderRiepilogo(){
+  var picker=document.getElementById('riepPicker'); if(!picker.value) picker.value=curYM;
+  var ym=picker.value; var anno=+ym.split('-')[0],mese=+ym.split('-')[1];
+  var daysInMonth=new Date(anno,mese,0).getDate();
+  var squadre=squadreReparto(curReparto); var lista=[]; var sqDi={};
+  if(squadre.length){ squadre.forEach(function(sq){ (sq.membri||[]).forEach(function(d){ lista.push(d); sqDi[d]=sq.nome; }); }); dipLiberiConPresenze(curReparto,ym).forEach(function(d){ if(lista.indexOf(d)<0){ lista.push(d); sqDi[d]='—'; } }); }
+  else lista=Object.keys(presOf(curReparto,ym));
+  var body='';
+  lista.forEach(function(dipId){
+    var c={t1:0,t2:0,t3:0,R:0,F:0,M:0,C:0,P:0,Fe:0};
+    for(var dd=1;dd<=daysInMonth;dd++){ var s=getStato(curReparto,ym,dipId,dd); if(s==='1')c.t1++;else if(s==='2')c.t2++;else if(s==='3')c.t3++;else if(s==='R')c.R++;else if(s==='F')c.F++;else if(s==='M')c.M++;else if(s==='C')c.C++;else if(s==='P')c.P++;else if(s==='Fe')c.Fe++; }
+    var tot=c.t1+c.t2+c.t3;
+    body+='<tr><td style="font-weight:600">'+esc(dipName(dipId))+'</td><td>'+esc(sqDi[dipId]||'—')+'</td><td class="c">'+c.t1+'</td><td class="c">'+c.t2+'</td><td class="c">'+c.t3+'</td><td class="c">'+c.R+'</td><td class="c">'+c.F+'</td><td class="c">'+c.M+'</td><td class="c">'+c.C+'</td><td class="c">'+c.P+'</td><td class="c">'+c.Fe+'</td><td class="c" style="font-weight:700">'+tot+'</td></tr>';
+  });
+  if(!body) body='<tr><td colspan="12" style="padding:20px;text-align:center;color:var(--ink3)">Nessun dato</td></tr>';
+  document.getElementById('riepBody').innerHTML=body;
+}
+function exportCSV(){
+  var ym=document.getElementById('riepPicker').value||curYM; var anno=+ym.split('-')[0],mese=+ym.split('-')[1];
+  var daysInMonth=new Date(anno,mese,0).getDate(); var squadre=squadreReparto(curReparto); var lista=[];
+  if(squadre.length) squadre.forEach(function(sq){ (sq.membri||[]).forEach(function(d){ lista.push(d); }); }); else lista=Object.keys(presOf(curReparto,ym));
+  var header='Dipendente'; for(var dd=1;dd<=daysInMonth;dd++) header+=','+dd; var csv=header+'\n';
+  lista.forEach(function(dipId){ var row='"'+dipName(dipId)+'"'; for(var d=1;d<=daysInMonth;d++) row+=','+getStato(curReparto,ym,dipId,d); csv+=row+'\n'; });
+  var blob=new Blob([csv],{type:'text/csv'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='presenze_'+curReparto+'_'+ym+'.csv'; a.click();
+}
+function renderAnagrafica(){
+  var box=document.getElementById('anagBody'); var html='';
+  store.anagrafica.filter(function(a){return a.attivo;}).forEach(function(a){ var ini=(a.cognome||'?').substring(0,1)+(a.nome||'').substring(0,1); html+='<div class="emp-card"><div class="emp-avatar">'+esc(ini.toUpperCase())+'</div><div><div style="font-weight:700">'+esc(a.cognome+' '+a.nome)+'</div><div style="font-size:12px;color:var(--ink3)">'+esc(a.ruolo||'')+(a.azienda?' · '+esc(a.azienda):'')+'</div></div></div>'; });
+  box.innerHTML=html||'<div style="color:var(--ink3)">Nessun dipendente.</div>';
+}
+
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function setSync(state){ var el=document.getElementById('syncIcon'); if(!el) return; if(state==='saving'){ el.textContent='⏳'; el.title='Salvataggio…'; } else if(state==='ok'){ el.textContent='☁️'; el.title='Dati sincronizzati'; } else { el.textContent='⚠️'; el.title='Errore sync'; } }
+function toast(msg,type){ var t=document.getElementById('toast'); t.textContent=msg; t.className='toast on'+(type==='ok'?' ok':type==='err'?' err':''); clearTimeout(window._tt); window._tt=setTimeout(function(){ t.className='toast'; },2800); }
+function showOverlay(msg){ var o=document.getElementById('loadingOverlay'); document.getElementById('loadingMsg').textContent=msg||'Caricamento…'; o.style.display='flex'; }
+function hideOverlay(){ document.getElementById('loadingOverlay').style.display='none'; }
+
+async function boot(){
+  buildRepartoBar();
+  document.getElementById('monthPicker').value=curYM;
+  setView('week');
+  if(typeof SB_URL==='undefined' || typeof SB_KEY==='undefined'){ hideOverlay(); setSync('err'); toast('Configurazione Supabase mancante (sb.js)','err'); return; }
+  await loadAll();
+  renderGrid();
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot);
+else boot();
+</script>
+</body>
+</html>
