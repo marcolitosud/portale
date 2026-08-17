@@ -1,0 +1,3878 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Energia — Effe Printing</title>
+
+<!-- PWA / Home screen icons -->
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#0F1F35">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Energia">
+<link rel="manifest" href="energia-manifest.json">
+
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  :root {
+    --navy: #0F1F35;
+    --navy-2: #1a2035;
+    --blue: #3b5bdb;
+    --blue-2: #4dabf7;
+    --green: #12b886;
+    --amber: #f59f00;
+    --red: #e03131;
+    --grey-50: #f8f9fa;
+    --grey-100: #f1f3f5;
+    --grey-200: #e9ecef;
+    --grey-400: #adb5bd;
+    --grey-600: #495057;
+    --grey-800: #212529;
+    --white: #ffffff;
+    --shadow: 0 1px 3px rgba(15, 31, 53, 0.06), 0 4px 12px rgba(15, 31, 53, 0.04);
+    --shadow-lg: 0 4px 20px rgba(15, 31, 53, 0.08);
+    --radius: 14px;
+    --radius-sm: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Barlow', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--grey-100);
+    color: var(--grey-800);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+
+  /* ─── TOPBAR ─── */
+  .topbar {
+    background: var(--navy-2);
+    color: #fff;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow);
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .logo-ep {
+    background: rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+  }
+  .topbar-title { font-weight: 600; font-size: 16px; }
+  .topbar-time { font-family: 'DM Mono', monospace; font-size: 13px; opacity: 0.7; margin-left: 8px; }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--blue-2); margin-left: 8px;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.4; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.3); }
+  }
+  .btn-back, .btn-refresh {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-back:hover, .btn-refresh:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.3); }
+  .btn-refresh { margin-right: 8px; }
+  .btn-refresh.spinning .refresh-ico { display: inline-block; animation: spin 0.8s linear infinite; }
+  .refresh-ico { display: inline-block; }
+
+  /* ─── HERO ATTIVO ─── */
+  .hero {
+    background: linear-gradient(135deg, #1a2035 0%, #2c3e5c 100%);
+    color: #fff;
+    padding: 24px 20px 20px;
+    border-radius: var(--radius);
+    margin: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    right: -30px; top: -30px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(77, 171, 247, 0.15) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .hero-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 1.5px;
+    opacity: 0.6; margin-bottom: 6px; text-transform: uppercase;
+  }
+  .hero-title-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .hero-title { font-size: 24px; font-weight: 700; line-height: 1.2; }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(18, 184, 134, 0.18);
+    border: 1px solid rgba(18, 184, 134, 0.5);
+    color: #63e6be;
+    padding: 5px 12px; border-radius: 999px;
+    font-size: 12px; font-weight: 600;
+  }
+  .hero-badge.warn {
+    background: rgba(245, 159, 0, 0.15);
+    border-color: rgba(245, 159, 0, 0.5);
+    color: #ffd8a8;
+  }
+  .hero-badge .b-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: pulse 2s ease-in-out infinite; }
+  .hero-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    position: relative;
+    z-index: 1;
+  }
+  .hero-kpi {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .hero-kpi-value {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 28px; font-weight: 700; line-height: 1;
+  }
+  .hero-kpi-unit { font-size: 13px; font-weight: 500; opacity: 0.6; margin-left: 3px; }
+  .hero-kpi-label {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.8px;
+    text-transform: uppercase; opacity: 0.6; margin-top: 6px;
+  }
+
+  /* ─── SECTIONS ─── */
+  .section { margin: 20px 16px; }
+  .section-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px; font-weight: 600; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--grey-600);
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-icon { font-size: 14px; }
+
+  /* ─── KPI GRID ─── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+  .kpi-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 18px 16px;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .kpi-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+  .kpi-card.accent-blue::before,
+  .kpi-card.accent-green::before,
+  .kpi-card.accent-amber::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+  }
+  .kpi-card.accent-blue::before  { background: var(--blue); }
+  .kpi-card.accent-green::before { background: var(--green); }
+  .kpi-card.accent-amber::before { background: var(--amber); }
+  .kpi-value {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 36px; font-weight: 700;
+    color: var(--navy); line-height: 1; margin-bottom: 4px;
+  }
+  .kpi-unit { font-size: 14px; font-weight: 500; color: var(--grey-600); margin-left: 4px; }
+  .kpi-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.8px;
+    text-transform: uppercase; color: var(--grey-600);
+    display: flex; align-items: center; gap: 6px; margin-top: 6px;
+  }
+  .kpi-sub { font-size: 11px; color: var(--grey-400); font-family: 'DM Mono', monospace; margin-top: 4px; }
+
+  /* Delta chip (novità #4) */
+  .kpi-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .delta-chip {
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 11px; font-weight: 700;
+    padding: 3px 8px; border-radius: 999px;
+    font-family: 'DM Mono', monospace;
+    white-space: nowrap;
+  }
+  .delta-chip.up   { background: #ebfbee; color: #2b8a3e; }
+  .delta-chip.down { background: #fff5f5; color: var(--red); }
+  .delta-chip.flat { background: var(--grey-100); color: var(--grey-600); }
+  .kpi-spark { margin-top: 10px; height: 26px; }
+  .kpi-spark svg { width: 100%; height: 26px; display: block; }
+
+  /* ─── SKELETON LOADING (novità #7) ─── */
+  .skeleton-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 18px 16px;
+    box-shadow: var(--shadow);
+    min-height: 110px;
+  }
+  .sk-line {
+    background: linear-gradient(90deg, var(--grey-100) 25%, var(--grey-200) 50%, var(--grey-100) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.2s infinite;
+    border-radius: 6px;
+    height: 14px;
+    margin-bottom: 10px;
+  }
+  .sk-line.big { height: 32px; width: 60%; }
+  .sk-line.small { width: 40%; height: 10px; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+
+  /* ─── CHART CARD ─── */
+  .chart-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 20px 16px;
+    box-shadow: var(--shadow);
+  }
+  .chart-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px; gap: 10px; flex-wrap: wrap;
+  }
+  .chart-title { font-weight: 600; font-size: 15px; color: var(--navy); }
+  .chart-legend { font-size: 11px; color: var(--grey-600); font-family: 'DM Mono', monospace; }
+  .chart-wrap { position: relative; height: 260px; }
+  .chart-actions { display: flex; gap: 6px; align-items: center; }
+  .chip-btn {
+    background: var(--grey-50);
+    border: 1px solid var(--grey-200);
+    color: var(--grey-600);
+    padding: 5px 11px;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .chip-btn:hover { background: var(--grey-100); color: var(--navy); }
+  .chip-btn.active { background: var(--navy-2); border-color: var(--navy-2); color: #fff; }
+  .chart-hint {
+    font-size: 11px; color: var(--grey-400);
+    font-family: 'DM Mono', monospace;
+    margin-top: 8px; text-align: right;
+  }
+
+  /* ─── DATE NAVIGATION BAR (sticky: resta in sovraimpressione) ─── */
+  .date-nav-section {
+    position: sticky;
+    top: 56px;                 /* subito sotto il topbar */
+    z-index: 90;
+    margin-bottom: 18px;
+  }
+  .date-nav-bar {
+    background: #fff;
+    border: 1px solid var(--grey-200);
+    border-radius: 12px;
+    padding: 10px 14px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    box-shadow: var(--shadow-lg);
+  }
+  .date-nav-bar .date-arrow {
+    background: var(--grey-50);
+    border: 1px solid var(--grey-200);
+    border-radius: 8px;
+    width: 36px; height: 36px;
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 18px; color: var(--navy);
+    transition: background 0.15s;
+  }
+  .date-nav-bar .date-arrow:hover { background: var(--grey-100); }
+  .date-nav-bar .date-arrow:disabled { opacity: 0.4; cursor: not-allowed; }
+  .date-nav-bar input[type="date"] {
+    padding: 8px 10px;
+    border: 1px solid var(--grey-200);
+    border-radius: 8px;
+    font-size: 14px; font-family: inherit;
+    color: var(--navy); background: #fff;
+  }
+  .date-nav-bar .date-today-btn {
+    padding: 8px 14px;
+    border: 1px solid var(--grey-200);
+    border-radius: 8px;
+    background: var(--grey-50);
+    cursor: pointer; font-size: 13px; font-weight: 500;
+    color: var(--navy);
+  }
+  .date-nav-bar .date-today-btn:hover { background: var(--grey-100); }
+  .date-nav-bar .date-today-btn.is-today {
+    background: var(--navy); color: #fff; border-color: var(--navy); cursor: default;
+  }
+  .date-nav-bar .date-label { font-size: 13px; color: var(--grey-600); margin-left: auto; }
+  .date-nav-bar .date-label.is-past { color: #b45309; font-weight: 600; }
+  .date-mode-btn {
+    padding: 8px 14px;
+    border: 1px solid var(--grey-200);
+    border-radius: 8px;
+    background: var(--grey-50);
+    cursor: pointer; font-size: 13px; font-weight: 600;
+    color: var(--grey-600);
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .date-mode-btn:hover { background: var(--grey-100); color: var(--navy); }
+  .date-mode-btn.active { background: var(--navy-2); color: #fff; border-color: var(--navy-2); }
+  .nav-sep { width: 1px; height: 26px; background: var(--grey-200); }
+  .range-arrow-lbl { font-size: 13px; color: var(--grey-400); }
+
+  /* ─── BILL / ECON ─── */
+  .bill-card {
+    background: linear-gradient(135deg, #1a2035 0%, #2c3e5c 100%);
+    color: #fff;
+    border-radius: var(--radius);
+    padding: 20px 18px;
+    margin-top: 12px;
+  }
+  .bill-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .bill-row:last-child { border: none; }
+  .bill-label { font-size: 13px; opacity: 0.7; font-weight: 500; }
+  .bill-value { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 600; }
+  .bill-value.big { font-size: 32px; font-weight: 700; }
+  .bill-sub { font-size: 11px; opacity: 0.5; font-family: 'DM Mono', monospace; margin-top: 2px; }
+  .bill-delta { font-size: 12px; font-weight: 700; font-family: 'DM Mono', monospace; }
+  .bill-delta.up { color: #ff8787; }     /* costo che sale = male */
+  .bill-delta.down { color: #63e6be; }   /* costo che scende = bene */
+
+  /* ─── DROPZONE FATTURE ─── */
+  .dropzone {
+    border: 2px dashed var(--grey-200);
+    border-radius: var(--radius);
+    background: var(--white);
+    padding: 28px 20px;
+    text-align: center;
+    color: var(--grey-600);
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 12px;
+  }
+  .dropzone:hover { border-color: var(--blue-2); background: #f4f8ff; }
+  .dropzone.dragover {
+    border-color: var(--blue);
+    background: #e7f0ff;
+    transform: scale(1.01);
+  }
+  .dropzone .dz-icon { font-size: 30px; margin-bottom: 8px; }
+  .dropzone .dz-title { font-weight: 600; color: var(--navy); font-size: 15px; margin-bottom: 4px; }
+  .dropzone .dz-sub { font-size: 12px; color: var(--grey-400); }
+  .dropzone .dz-status { font-size: 13px; margin-top: 10px; font-weight: 600; display: none; }
+  .dropzone .dz-status.info { color: var(--blue); display: block; }
+  .dropzone .dz-status.ok { color: var(--green); display: block; }
+  .dropzone .dz-status.err { color: var(--red); display: block; }
+  .dz-demo-link {
+    display: inline-block; margin-top: 10px;
+    font-size: 12px; color: var(--blue);
+    text-decoration: underline; cursor: pointer;
+  }
+  .dropzone.dz-small { padding: 16px 18px; display: flex; align-items: center; gap: 14px; text-align: left; }
+  .dropzone.dz-small .dz-icon { font-size: 24px; margin: 0; }
+  .dropzone.dz-small .dz-title { font-size: 14px; }
+  .dropzone.dz-small .dz-body { flex: 1; }
+
+  /* Barra fasce cliccabile (filtro sul grafico consumi) */
+  .fascia-seg { cursor: pointer; transition: opacity 0.15s, transform 0.1s; user-select: none; }
+  .fascia-seg:hover { opacity: 0.85; }
+  .fascia-seg.off { opacity: 0.25; }
+
+  /* Chip "torna all'ultima fattura" */
+  .bill-nav {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    padding: 4px 10px; border-radius: 999px;
+    font-size: 11px; font-weight: 600;
+    cursor: pointer; transition: background 0.15s;
+    font-family: inherit;
+  }
+  .bill-nav:hover { background: rgba(255,255,255,0.18); }
+
+  /* ─── ARCHIVIO DOCUMENTI ─── */
+  .doc-badge {
+    display: inline-block; padding: 3px 9px;
+    border-radius: 999px; font-size: 10px; font-weight: 700;
+    letter-spacing: 0.4px; text-transform: uppercase;
+  }
+  .doc-badge.fattura { background: #fff4e6; color: #b45309; }
+  .doc-badge.consumi { background: #e7f0ff; color: #2e49b3; }
+  .doc-action {
+    background: var(--grey-50);
+    border: 1px solid var(--grey-200);
+    color: var(--grey-600);
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-family: inherit; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .doc-action:hover { background: var(--grey-100); color: var(--navy); }
+  .doc-action.danger:hover { background: #fff5f5; color: var(--red); border-color: #ffc9c9; }
+  .doc-empty {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 20px;
+    text-align: center;
+    color: var(--grey-400);
+    font-size: 13px;
+  }
+
+  /* ─── MODAL CONFERMA FATTURA ─── */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(15, 31, 53, 0.55);
+    display: none; align-items: center; justify-content: center;
+    z-index: 500; padding: 16px;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: #fff;
+    border-radius: var(--radius);
+    padding: 24px 22px;
+    width: 100%; max-width: 440px;
+    max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+  .modal-title { font-size: 18px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+  .modal-sub { font-size: 12px; color: var(--grey-600); margin-bottom: 16px; }
+  .modal-field { margin-bottom: 12px; }
+  .modal-field label {
+    display: block; font-size: 11px; font-weight: 600;
+    letter-spacing: 0.5px; text-transform: uppercase;
+    color: var(--grey-600); margin-bottom: 5px;
+  }
+  .modal-field input {
+    width: 100%; padding: 10px 12px;
+    border: 1.5px solid var(--grey-200);
+    border-radius: var(--radius-sm);
+    font-family: inherit; font-size: 14px; color: var(--navy);
+  }
+  .modal-field input:focus { outline: none; border-color: var(--blue); }
+  .modal-field input.parsed-ok { border-color: var(--green); background: #f4fdf7; }
+  .modal-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .modal-grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .modal-btn {
+    flex: 1; padding: 12px;
+    border: none; border-radius: var(--radius-sm);
+    font-family: inherit; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .modal-btn.primary { background: var(--blue); color: #fff; }
+  .modal-btn.primary:hover { background: #2e49b3; }
+  .modal-btn.ghost { background: var(--grey-100); color: var(--grey-600); }
+  .modal-btn.ghost:hover { background: var(--grey-200); }
+
+  /* ─── ANALISI FATTURE ─── */
+  .analysis-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 18px 16px;
+    box-shadow: var(--shadow);
+    margin-top: 12px;
+  }
+  .analysis-title {
+    font-weight: 600; font-size: 14px; color: var(--navy);
+    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .analysis-item {
+    display: flex; gap: 10px;
+    padding: 8px 0;
+    font-size: 13.5px; line-height: 1.45;
+    color: var(--grey-800);
+    border-bottom: 1px solid var(--grey-100);
+  }
+  .analysis-item:last-child { border: none; }
+  .analysis-item .a-ico { flex-shrink: 0; }
+  .analysis-item strong { color: var(--navy); }
+
+  /* ─── ENV CARDS ─── */
+  .env-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .env-card {
+    background: linear-gradient(135deg, #d3f9d8 0%, #ebfbee 100%);
+    border-radius: var(--radius);
+    padding: 18px 16px;
+    position: relative; overflow: hidden;
+  }
+  .env-card::after {
+    content: '';
+    position: absolute; right: -15px; bottom: -15px;
+    font-size: 70px; opacity: 0.15;
+  }
+  .env-card.co2::after { content: '☁'; }
+  .env-card.trees::after { content: '🌳'; }
+  .env-value {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 32px; font-weight: 700;
+    color: #2b8a3e; line-height: 1;
+  }
+  .env-unit { font-size: 13px; color: #2f9e44; font-weight: 500; }
+  .env-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+    text-transform: uppercase; color: #2b8a3e; margin-top: 6px;
+  }
+
+  /* ─── FOOTER ─── */
+  .footer-info {
+    text-align: center;
+    padding: 20px;
+    font-size: 12px;
+    color: var(--grey-400);
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* ─── STATE / SPINNER ─── */
+  .state-msg { text-align: center; padding: 40px 20px; color: var(--grey-600); }
+  .state-msg.error { color: var(--red); }
+  .spinner {
+    display: inline-block; width: 18px; height: 18px;
+    border: 2px solid var(--grey-200);
+    border-top-color: var(--blue);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle; margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ─── TABS BAR ─── */
+  .tabs-bar {
+    display: flex; gap: 6px; margin-bottom: 12px;
+    background: var(--white);
+    padding: 6px;
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tab-btn {
+    flex: 1; min-width: 90px;
+    background: transparent; border: none;
+    padding: 10px 12px;
+    font-family: inherit; font-size: 13px; font-weight: 600;
+    color: var(--grey-600);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .tab-btn:hover { background: var(--grey-100); color: var(--navy); }
+  .tab-btn.active { background: var(--navy-2); color: #fff; }
+  .tab-btn.active:hover { background: var(--navy); }
+
+  /* ─── DETAILS TABLE ─── */
+  .details-table {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 8px;
+    box-shadow: var(--shadow);
+    overflow-x: auto;
+  }
+  .details-table table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 500px; }
+  .details-table th {
+    text-align: left; padding: 10px 12px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px; font-weight: 600; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--grey-600);
+    border-bottom: 1px solid var(--grey-200);
+  }
+  .details-table td { padding: 10px 12px; border-bottom: 1px solid var(--grey-100); color: var(--grey-800); }
+  .details-table tr:last-child td { border-bottom: none; }
+  .details-table tr:hover td { background: var(--grey-50); }
+  .details-table .num { font-family: 'DM Mono', monospace; text-align: right; font-size: 12px; }
+  .details-table .eur { font-weight: 600; color: var(--green); }
+  .details-table .zero-tag {
+    display: inline-block; padding: 2px 6px;
+    background: #fff4e6; color: var(--amber);
+    border-radius: 4px; font-size: 10px; font-weight: 600;
+  }
+  .details-table tr.clickable { cursor: pointer; }
+  .details-table tr.clickable:hover td { background: #eef3ff; }
+
+  /* ─── BOTTOM NAV MOBILE (novità #7) ─── */
+  .bottom-nav {
+    display: none;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--navy-2);
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    z-index: 200;
+    box-shadow: 0 -4px 16px rgba(15, 31, 53, 0.25);
+  }
+  .bottom-nav-inner { display: flex; gap: 4px; max-width: 500px; margin: 0 auto; }
+  .bn-btn {
+    flex: 1;
+    background: transparent; border: none;
+    color: rgba(255,255,255,0.55);
+    padding: 8px 4px;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 10px; font-weight: 600;
+    cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    transition: all 0.15s;
+  }
+  .bn-btn .bn-ico { font-size: 18px; }
+  .bn-btn.active, .bn-btn:hover { color: #fff; background: rgba(255,255,255,0.08); }
+
+  .muted { color: var(--grey-400); font-style: italic; }
+
+  /* ─── RESPONSIVE ─── */
+  @media (min-width: 640px) {
+    .hero-title { font-size: 30px; }
+    .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (min-width: 900px) {
+    .section, .hero { margin-left: auto; margin-right: auto; max-width: 1100px; }
+    body { padding-bottom: 40px; }
+  }
+  @media (max-width: 639px) {
+    .bottom-nav { display: block; }
+    body { padding-bottom: 76px; }
+    .topbar-time { display: none; }
+  }
+
+  /* ─── AUTH SCREENS (login / set password) ─── */
+  .auth-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #0F1F35 0%, #2c3e5c 100%);
+    padding: 20px;
+  }
+  .auth-card {
+    background: #fff;
+    border-radius: var(--radius);
+    padding: 36px 28px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    width: 100%;
+    max-width: 400px;
+  }
+  .auth-logo {
+    display: inline-block;
+    background: var(--navy-2);
+    color: #fff;
+    font-weight: 800;
+    padding: 8px 14px;
+    border-radius: 8px;
+    letter-spacing: 1px;
+    margin-bottom: 18px;
+  }
+  .auth-title { font-size: 22px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+  .auth-subtitle { font-size: 13px; color: var(--grey-600); margin-bottom: 24px; line-height: 1.4; }
+  .auth-field { margin-bottom: 14px; }
+  .auth-field label {
+    display: block; font-size: 12px; font-weight: 600;
+    letter-spacing: 0.5px; text-transform: uppercase;
+    color: var(--grey-600); margin-bottom: 6px;
+  }
+  .auth-field input {
+    width: 100%; padding: 12px 14px;
+    border: 1.5px solid var(--grey-200);
+    border-radius: var(--radius-sm);
+    font-family: inherit; font-size: 15px; color: var(--navy);
+    transition: border-color 0.15s;
+  }
+  .auth-field input:focus { outline: none; border-color: var(--blue); }
+  .auth-btn {
+    width: 100%; padding: 13px;
+    background: var(--blue); color: #fff;
+    border: none; border-radius: var(--radius-sm);
+    font-family: inherit; font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: background 0.15s; margin-top: 6px;
+  }
+  .auth-btn:hover { background: #2e49b3; }
+  .auth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .auth-msg {
+    padding: 10px 12px; border-radius: var(--radius-sm);
+    font-size: 13px; margin-bottom: 14px; display: none;
+  }
+  .auth-msg.error { background: #fff5f5; color: var(--red); border-left: 3px solid var(--red); display: block; }
+  .auth-msg.success { background: #ebfbee; color: #2b8a3e; border-left: 3px solid var(--green); display: block; }
+  .auth-msg.info { background: #e7f5ff; color: #1971c2; border-left: 3px solid var(--blue); display: block; }
+  .btn-logout {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #fff; padding: 6px 12px; border-radius: 8px;
+    font-family: inherit; font-size: 12px; cursor: pointer;
+    margin-right: 8px; transition: all 0.15s;
+  }
+  .btn-logout:hover { background: rgba(255,255,255,0.15); }
+  .user-badge {
+    font-size: 12px; opacity: 0.7; margin-right: 8px;
+    font-family: 'DM Mono', monospace;
+  }
+  @media (max-width: 600px) { .user-badge { display: none; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ SCHERMATA LOGIN ═══════════ -->
+<div id="login-screen" class="auth-screen" style="display:none">
+  <div class="auth-card">
+    <div class="auth-logo">EP</div>
+    <div class="auth-title">Portale Energia</div>
+    <div class="auth-subtitle">Effe Printing S.r.l. — Accedi con le tue credenziali aziendali</div>
+    <div id="login-msg" class="auth-msg"></div>
+    <div class="auth-field">
+      <label for="login-email">Email</label>
+      <input type="email" id="login-email" autocomplete="email" placeholder="nome.cognome@litosud.it">
+    </div>
+    <div class="auth-field">
+      <label for="login-password">Password</label>
+      <input type="password" id="login-password" autocomplete="current-password" placeholder="••••••••">
+    </div>
+    <button class="auth-btn" id="login-btn">Accedi</button>
+  </div>
+</div>
+
+<!-- ═══════════ SCHERMATA SET PASSWORD (da invito email) ═══════════ -->
+<div id="setpwd-screen" class="auth-screen" style="display:none">
+  <div class="auth-card">
+    <div class="auth-logo">EP</div>
+    <div class="auth-title">Imposta la tua password</div>
+    <div class="auth-subtitle">Benvenuto nel Portale Energia di Effe Printing. Crea la password che userai per accedere.</div>
+    <div id="setpwd-msg" class="auth-msg"></div>
+    <div class="auth-field">
+      <label for="setpwd-password">Nuova password</label>
+      <input type="password" id="setpwd-password" autocomplete="new-password" placeholder="minimo 8 caratteri">
+    </div>
+    <div class="auth-field">
+      <label for="setpwd-password2">Conferma password</label>
+      <input type="password" id="setpwd-password2" autocomplete="new-password" placeholder="ripeti la password">
+    </div>
+    <button class="auth-btn" id="setpwd-btn">Imposta password e accedi</button>
+  </div>
+</div>
+
+<!-- ═══════════ APP CONTAINER (dashboard) ═══════════ -->
+<div id="app-container" style="display:none">
+
+<!-- ═══════════ TOPBAR ═══════════ -->
+<div class="topbar">
+  <div class="topbar-left">
+    <span class="logo-ep">EP</span>
+    <span class="topbar-title">Energia</span>
+    <span class="topbar-time" id="now"></span>
+    <span class="status-dot"></span>
+  </div>
+  <div style="display:flex;align-items:center">
+    <span class="user-badge" id="user-badge"></span>
+    <button class="btn-refresh" id="refresh-btn" title="Aggiorna dati adesso">
+      <span class="refresh-ico">⟳</span> Aggiorna
+    </button>
+    <button class="btn-logout" id="logout-btn">Logout</button>
+    <a href="index.html" class="btn-back">← Portale</a>
+  </div>
+</div>
+
+
+<!-- ═══════════ HERO ATTIVO (novità #1) ═══════════ -->
+<div class="hero">
+  <div class="hero-label">Effe Printing S.r.l. — Oricola</div>
+  <div class="hero-title-row">
+    <h1 class="hero-title">⚡ Dashboard Energia</h1>
+    <span class="hero-badge" id="hero-badge" style="display:none">
+      <span class="b-dot"></span><span id="hero-badge-text"></span>
+    </span>
+  </div>
+  <div class="hero-kpis" id="hero-kpis">
+    <div class="hero-kpi"><div class="hero-kpi-value">—</div><div class="hero-kpi-label">Caricamento</div></div>
+  </div>
+</div>
+
+<!-- ═══════════ DATE NAVIGATION (novità #2: globale) ═══════════ -->
+<div class="section date-nav-section" id="sec-data">
+  <div class="date-nav-bar">
+    <button class="date-mode-btn active" id="mode-giorno-btn" onclick="setMode('giorno')">📅 Giorno</button>
+    <button class="date-mode-btn" id="mode-mese-btn" onclick="setMode('mese')">🗓 Mese</button>
+    <button class="date-mode-btn" id="mode-periodo-btn" onclick="setMode('periodo')">📆 Periodo</button>
+    <span class="nav-sep"></span>
+    <span id="day-controls" style="display:contents">
+      <button class="date-arrow" id="date-prev" onclick="navDate(-1)" title="Giorno precedente">←</button>
+      <input type="date" id="date-picker" onchange="onDatePickerChange()"/>
+      <button class="date-arrow" id="date-next" onclick="navDate(1)" title="Giorno successivo">→</button>
+      <button class="date-today-btn" id="date-today" onclick="goToday()">Oggi</button>
+    </span>
+    <span id="mese-controls" style="display:none">
+      <button class="date-arrow" id="mese-prev" onclick="navMese(-1)" title="Mese precedente">←</button>
+      <input type="month" id="mese-picker" onchange="onMesePickerChange()"/>
+      <button class="date-arrow" id="mese-next" onclick="navMese(1)" title="Mese successivo">→</button>
+    </span>
+    <span id="range-controls" style="display:none">
+      <input type="date" id="range-start">
+      <span class="range-arrow-lbl">→</span>
+      <input type="date" id="range-end">
+      <button class="date-today-btn" onclick="applyRange()">Applica</button>
+    </span>
+    <span class="date-label" id="date-label"></span>
+  </div>
+</div>
+
+<!-- ═══════════ LIVE KPI ═══════════ -->
+<div class="section" id="sec-live">
+  <div class="section-title"><span class="section-icon">🔋</span><span id="live-kpi-title">Produzione fotovoltaica — Live</span></div>
+  <div class="kpi-grid" id="live-kpi"></div>
+</div>
+
+<!-- ═══════════ CURVA PRODUZIONE (novità #3 confronto, #5 zoom) ═══════════ -->
+<div class="section">
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="chart-title" id="prod-chart-title">📈 Curva produzione oggi</div>
+      <div class="chart-actions">
+        <button class="chip-btn" id="zoom-reset" onclick="resetProdZoom()" style="display:none">↺ Reset zoom</button>
+      </div>
+    </div>
+    <div class="chart-wrap"><canvas id="prodChart"></canvas></div>
+    <div class="chart-hint">🖱 rotella / ✌️ pinch per zoomare · trascina per scorrere · doppio click per reset</div>
+    <div class="chart-legend" id="chart-legend" style="margin-top:4px">—</div>
+  </div>
+</div>
+
+<!-- ═══════════ BILANCIO RID (novità #2: drill-down) ═══════════ -->
+<!-- ═══════════ CONFRONTO VS PVSYST (visibile in modalità Mese) ═══════════ -->
+<div class="section" id="sec-pvsyst" style="display:none">
+  <div class="section-title"><span class="section-icon">📐</span>Confronto vs baseline PVSyst (contrattuale)</div>
+  <div class="kpi-grid" id="pvsyst-kpi"></div>
+  <div class="chart-card" style="margin-top:12px">
+    <div class="chart-header">
+      <div class="chart-title" id="pvsyst-meteo-title">☀️ Irraggiamento reale vs atteso</div>
+      <div class="chart-legend" id="pvsyst-meteo-legend">—</div>
+    </div>
+    <div id="pvsyst-analisi" style="font-size:13.5px;line-height:1.55;color:var(--grey-800)"></div>
+  </div>
+</div>
+
+<div class="section" id="sec-ricavi">
+  <div class="section-title"><span class="section-icon">💶</span>Ricavi Ritiro Dedicato GSE / MGP CSUD</div>
+
+  <div class="tabs-bar" id="bilancio-tabs">
+    <button class="tab-btn active" data-tab="oggi">📅 Giorno</button>
+    <button class="tab-btn" data-tab="giorni">📊 Ultimi 30 giorni</button>
+    <button class="tab-btn" data-tab="mesi">🗓️ Mensile</button>
+  </div>
+
+  <div class="kpi-grid" id="bilancio-kpi"></div>
+
+  <div class="chart-card" style="margin-top:12px">
+    <div class="chart-header">
+      <div class="chart-title" id="bilancio-chart-title">📊 Produzione vs prezzo zonale orario</div>
+      <div class="chart-legend" id="bilancio-legend">—</div>
+    </div>
+    <div class="chart-wrap"><canvas id="bilancioChart"></canvas></div>
+    <div class="chart-hint" id="bilancio-hint" style="display:none">👆 clicca una barra per aprire il dettaglio orario di quel giorno</div>
+  </div>
+
+  <div id="bilancio-details" style="display:none;margin-top:12px"></div>
+</div>
+
+<!-- ═══════════ FATTURE ENGIE (novità #6 + drag&drop) ═══════════ -->
+<div class="section" id="sec-fatture">
+  <div class="section-title"><span class="section-icon">💰</span>Fatture ENGIE — archivio e analisi</div>
+
+  <!-- Dropzone -->
+  <div class="dropzone" id="dropzone">
+    <div class="dz-icon">📄</div>
+    <div class="dz-title">Trascina qui una fattura PDF ENGIE</div>
+    <div class="dz-sub">oppure clicca per selezionare il file — i dati vengono estratti automaticamente</div>
+    <div class="dz-status" id="dz-status"></div>
+    <input type="file" id="file-input" accept="application/pdf" style="display:none">
+  </div>
+
+  <!-- Grafico comparativo 12 fatture -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="chart-title">📊 Andamento fatture — ultimi 12 mesi</div>
+      <div class="chart-legend" id="fatture-legend">—</div>
+    </div>
+    <div class="chart-wrap"><canvas id="fattureChart"></canvas></div>
+  </div>
+
+  <!-- Ultima fattura (con delta) -->
+  <div class="bill-card" id="bill-card"></div>
+
+  <!-- Dettaglio consumi: dropzone dedicata -->
+  <div class="dropzone dz-small" id="dropzone-consumi" style="margin-top:12px">
+    <div class="dz-icon">📉</div>
+    <div class="dz-body">
+      <div class="dz-title">Dettaglio consumi ENGIE (XLSX, CSV o PDF)</div>
+      <div class="dz-sub">Export del portale ENGIE con curva quartoraria (Off-take) — le fasce F1/F2/F3 le calcolo io col calendario ARERA</div>
+      <div class="dz-status" id="dzc-status"></div>
+    </div>
+    <input type="file" id="file-input-consumi" accept="application/pdf,.csv,text/csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none">
+  </div>
+
+  <!-- Grafico consumo giornaliero per fasce (compare quando c'è il dettaglio) -->
+  <div class="chart-card" id="consumi-card" style="display:none;margin-top:12px">
+    <div class="chart-header">
+      <div class="chart-title" id="consumi-chart-title">📉 Consumo giornaliero per fasce</div>
+      <div class="chart-legend" id="consumi-legend">—</div>
+    </div>
+    <div class="chart-wrap"><canvas id="consumiChart"></canvas></div>
+    <div class="chart-hint">👆 clicca F1 / F2 / F3 nella card fattura (o nella legenda) per filtrare le fasce</div>
+  </div>
+
+  <!-- Analisi automatica -->
+  <div class="analysis-card" id="analysis-card"></div>
+</div>
+
+<!-- ═══════════ ARCHIVIO DOCUMENTI CARICATI ═══════════ -->
+<div class="section" id="sec-documenti">
+  <div class="section-title"><span class="section-icon">🗂</span>Archivio documenti caricati</div>
+  <div id="documenti-box">
+    <div class="doc-empty">Nessun documento in archivio. I PDF delle fatture e i file dei consumi che carichi restano salvati qui.</div>
+  </div>
+</div>
+
+<!-- ═══════════ AMBIENTE ═══════════ -->
+<div class="section" id="sec-ambiente">
+  <div class="section-title"><span class="section-icon">🌱</span>Impatto ambientale — Lifetime</div>
+  <div class="env-grid" id="env-grid">
+    <div class="env-card co2">
+      <div class="env-value" id="co2-value">—</div>
+      <div class="env-unit">tonnellate CO₂ evitate</div>
+      <div class="env-label">Cumulate dall'installazione</div>
+    </div>
+    <div class="env-card trees">
+      <div class="env-value" id="trees-value">—</div>
+      <div class="env-unit">alberi equivalenti</div>
+      <div class="env-label">Capacità assorbimento CO₂</div>
+    </div>
+  </div>
+</div>
+
+<div class="footer-info" id="footer-info">Caricamento…</div>
+
+<!-- ═══════════ BOTTOM NAV MOBILE ═══════════ -->
+<div class="bottom-nav">
+  <div class="bottom-nav-inner">
+    <button class="bn-btn active" data-target="sec-live"><span class="bn-ico">🔋</span>Live</button>
+    <button class="bn-btn" data-target="sec-ricavi"><span class="bn-ico">💶</span>Ricavi</button>
+    <button class="bn-btn" data-target="sec-fatture"><span class="bn-ico">💰</span>Fatture</button>
+    <button class="bn-btn" data-target="sec-ambiente"><span class="bn-ico">🌱</span>Ambiente</button>
+  </div>
+</div>
+
+</div> <!-- /#app-container -->
+
+<!-- ═══════════ MODAL CONFERMA FATTURA ═══════════ -->
+<div class="modal-backdrop" id="fattura-modal">
+  <div class="modal">
+    <div class="modal-title">📄 Verifica dati estratti</div>
+    <div class="modal-sub" id="fattura-modal-sub">Controlla i campi estratti dal PDF e correggi se necessario prima di salvare.</div>
+    <div style="margin:-8px 0 14px">
+      <span class="dz-demo-link" id="copy-pdf-text" style="display:none;margin-top:0">📋 Copia il testo estratto dal PDF (serve per calibrare il riconoscimento)</span>
+    </div>
+    <div class="modal-grid2">
+      <div class="modal-field">
+        <label>Mese di riferimento</label>
+        <input type="month" id="mf-mese">
+      </div>
+      <div class="modal-field">
+        <label>Numero fattura</label>
+        <input type="text" id="mf-numero" placeholder="es. 2026001234">
+      </div>
+    </div>
+    <div class="modal-grid2">
+      <div class="modal-field">
+        <label>Totale fattura (€, IVA incl.)</label>
+        <input type="number" step="0.01" id="mf-totale">
+      </div>
+      <div class="modal-field">
+        <label>Consumo totale (kWh)</label>
+        <input type="number" step="1" id="mf-kwh">
+      </div>
+    </div>
+    <div class="modal-grid3">
+      <div class="modal-field">
+        <label>kWh F1</label>
+        <input type="number" step="1" id="mf-f1">
+      </div>
+      <div class="modal-field">
+        <label>kWh F2</label>
+        <input type="number" step="1" id="mf-f2">
+      </div>
+      <div class="modal-field">
+        <label>kWh F3</label>
+        <input type="number" step="1" id="mf-f3">
+      </div>
+    </div>
+    <div class="modal-grid2">
+      <div class="modal-field">
+        <label>PUN medio (€/MWh) — opzionale</label>
+        <input type="number" step="0.01" id="mf-pun">
+      </div>
+      <div class="modal-field">
+        <label>POD — opzionale</label>
+        <input type="text" id="mf-pod" placeholder="IT001E...">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn ghost" onclick="closeFatturaModal()">Annulla</button>
+      <button class="modal-btn primary" onclick="salvaFattura()">Salva fattura</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ MODAL RIEPILOGO DETTAGLIO CONSUMI ═══════════ -->
+<div class="modal-backdrop" id="consumi-modal">
+  <div class="modal">
+    <div class="modal-title">📉 Importa dettaglio consumi</div>
+    <div class="modal-sub" id="consumi-modal-sub">Riepilogo dei dati riconosciuti.</div>
+    <div class="modal-field">
+      <label>Mese di riferimento</label>
+      <input type="month" id="mc-mese">
+    </div>
+    <div id="consumi-modal-summary" style="font-size:13.5px;line-height:1.6;color:var(--grey-800);background:var(--grey-50);border-radius:10px;padding:12px 14px;margin-bottom:6px"></div>
+    <div class="modal-actions">
+      <button class="modal-btn ghost" onclick="closeConsumiModal()">Annulla</button>
+      <button class="modal-btn primary" onclick="salvaConsumi()">Importa dettaglio</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ╔═══════════════════════════════════════════════════════════════╗
+// ║  ENERGIA v2 — Effe Printing (produzione)                      ║
+// ║  Dati reali: fv_produzione (FusionSolar), bilancio_* (GME     ║
+// ║  MGP CSUD via GitHub Actions), engie_fatture, consumi e       ║
+// ║  archivio documenti su Supabase (tabelle + Storage).          ║
+// ║  Setup una tantum: eseguire setup-supabase.sql                ║
+// ╚═══════════════════════════════════════════════════════════════╝
+
+// ═══════════════════════════════════════════════════════════════
+// CONFIGURAZIONE
+// ═══════════════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://tawnnatzrdhdrjjwppmt.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_QQqBsjbg_CGL7V6RGnJJPg_ArxI8SGO';
+const DOC_BUCKET = 'documenti-energia';
+
+const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    flowType: 'implicit'
+  }
+});
+
+async function authToken() {
+  const { data: { session } } = await supa.auth.getSession();
+  return session?.access_token || SUPABASE_KEY;
+}
+// Sessione scaduta/revocata: riporto al login invece di restare sugli skeleton
+async function handleAuthLost() {
+  const { data: { session } } = await supa.auth.getSession();
+  if (!session) {
+    dashboardStarted = false;
+    showScreen('login-screen');
+    showMsg('login-msg', 'Sessione scaduta: accedi di nuovo per continuare.', 'info');
+    return true;
+  }
+  return false;
+}
+// GET su PostgREST con token della sessione
+async function supaGet(path) {
+  const token = await authToken();
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
+  });
+  if (r.status === 401) { await handleAuthLost(); throw new Error('HTTP 401 — sessione non valida'); }
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+// Scritture (POST/PATCH/DELETE) su PostgREST
+async function supaWrite(path, method = 'POST', body = null) {
+  const token = await authToken();
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    method,
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (r.status === 401) { await handleAuthLost(); throw new Error('HTTP 401 — sessione non valida'); }
+  if (!r.ok) {
+    const t = await r.text().catch(() => '');
+    throw new Error(`HTTP ${r.status}${t ? ' — ' + t.slice(0, 200) : ''}`);
+  }
+  return true;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BASELINE CONTRATTUALE PVSYST (scheda impianto SunCity, as-built)
+// E_Grid mensile atteso [kWh] e GlobHor [kWh/m²] dalla simulazione.
+// Dal II anno di esercizio (allaccio 20/08/2025) si applica il
+// decadimento moduli 0,40%/anno come da contratto.
+// ═══════════════════════════════════════════════════════════════
+const PVSYST = {
+  allaccio: new Date(2025, 7, 20),          // 20/08/2025
+  degradoAnnuo: 0.004,                       // 0,40%/anno dal II anno
+  mesi: { //    E_Grid kWh   GlobHor kWh/m²
+    1:  { egrid: 198900, globhor: 51.5 },
+    2:  { egrid: 253600, globhor: 64.8 },
+    3:  { egrid: 376100, globhor: 96.0 },
+    4:  { egrid: 634600, globhor: 159.6 },
+    5:  { egrid: 858100, globhor: 217.3 },
+    6:  { egrid: 779100, globhor: 199.9 },
+    7:  { egrid: 940100, globhor: 240.3 },
+    8:  { egrid: 770900, globhor: 197.0 },
+    9:  { egrid: 542700, globhor: 136.8 },
+    10: { egrid: 437800, globhor: 107.7 },
+    11: { egrid: 216400, globhor: 55.5 },
+    12: { egrid: 192500, globhor: 48.3 }
+  }
+};
+// Anno di esercizio (1 = primo anno) e fattore di degrado per una data
+function pvsystAnnoEsercizio(d) {
+  let anni = d.getFullYear() - PVSYST.allaccio.getFullYear();
+  const anniv = new Date(PVSYST.allaccio);
+  anniv.setFullYear(PVSYST.allaccio.getFullYear() + anni);
+  if (d < anniv) anni -= 1;
+  return Math.max(1, anni + 1);
+}
+function pvsystFattoreDegrado(d) {
+  const anno = pvsystAnnoEsercizio(d);
+  return Math.pow(1 - PVSYST.degradoAnnuo, Math.max(0, anno - 1));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UTILITY (identiche al file di produzione)
+// ═══════════════════════════════════════════════════════════════
+function fmt(num, decimals = 0) {
+  if (num === null || num === undefined || isNaN(num)) return '—';
+  return new Intl.NumberFormat('it-IT', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+  }).format(num);
+}
+function fmtEur(num) {
+  if (num === null || isNaN(num)) return '—';
+  return new Intl.NumberFormat('it-IT', {
+    style: 'currency', currency: 'EUR',
+    minimumFractionDigits: 0, maximumFractionDigits: 0
+  }).format(num);
+}
+function fmtTime(isoStr) {
+  const d = new Date(isoStr);
+  return d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+}
+function todayDate() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+function fmtDateForPicker(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+function fmtDateForLabel(d) {
+  return d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+function fmtDateShort(d) {
+  return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long' });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DATA ACCESS LAYER — viste Supabase reali
+// fv_produzione: letture FusionSolar · bilancio_*: prezzi GME MGP
+// CSUD × produzione (pipeline GitHub Actions) · engie_fatture
+// ═══════════════════════════════════════════════════════════════
+// Letture FV del giorno scelto (intervallo locale → estremi UTC)
+async function fetchProduzione(date) {
+  const dayStart = new Date(date);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setDate(dayEnd.getDate() + 1);
+  const rows = await supaGet(
+    `fv_produzione?ts=gte.${dayStart.toISOString()}&ts=lt.${dayEnd.toISOString()}&order=ts.asc&limit=500`
+  );
+  return rows || [];
+}
+
+// Bilancio orario (produzione × prezzo zonale GME).
+// Oggi: vista parametrica `bilancio_orario_oggi`.
+// Giorni passati: vista `bilancio_orario` filtrata per data; se la vista
+// non esiste su Supabase torna null e la UI mostra come crearla.
+async function fetchBilancioOrario(date) {
+  const isToday = date.getTime() === todayDate().getTime();
+  try {
+    if (isToday) return await supaGet('bilancio_orario_oggi?order=ora.asc');
+    return await supaGet(`bilancio_orario?data=eq.${fmtDateForPicker(date)}&order=ora.asc`);
+  } catch (err) {
+    console.warn('Bilancio orario non disponibile per la data', err);
+    return null;
+  }
+}
+
+async function fetchBilancioGiorni() {
+  return supaGet('bilancio_giornaliero?order=data.desc&limit=30').catch(() => []);
+}
+async function fetchBilancioMesi() {
+  return supaGet('bilancio_mensile?order=mese.desc&limit=12').catch(() => []);
+}
+
+// Modalità MESE/PERIODO: aggregati giornalieri dalla stessa vista GME.
+// Nessun limite di durata: PostgREST tronca a 1000 righe, quindi pagino
+// (stesso principio della sbGetAll del portale).
+async function fetchRangeDaily(start, end) {
+  const base = `bilancio_giornaliero?data=gte.${fmtDateForPicker(start)}&data=lte.${fmtDateForPicker(end)}&order=data.asc`;
+  const out = [];
+  let offset = 0;
+  while (true) {
+    let chunk;
+    try {
+      chunk = await supaGet(`${base}&limit=1000&offset=${offset}`);
+    } catch (err) {
+      console.warn('fetchRangeDaily', err);
+      break;
+    }
+    if (!chunk || !chunk.length) break;
+    out.push(...chunk);
+    if (chunk.length < 1000) break;
+    offset += 1000;
+  }
+  return out.map(r => ({
+    data: r.data,
+    produzione_kwh: Math.round((parseFloat(r.produzione_mwh) || 0) * 1000),
+    produzione_mwh: parseFloat(r.produzione_mwh) || 0,
+    prezzo_medio_pesato_eur_mwh: parseFloat(r.prezzo_medio_pesato_eur_mwh) || 0,
+    ore_a_zero: parseInt(r.ore_a_zero) || 0,
+    ricavo_eur: parseFloat(r.ricavo_eur) || 0
+  }));
+}
+
+// Fatture ENGIE + marcatura di quelle caricate da PDF (via archivio documenti)
+async function fetchFatture() {
+  const [rows, docs] = await Promise.all([
+    supaGet('engie_fatture?order=mese.desc&limit=24').catch(() => []),
+    supaGet('energia_documenti?tipo=eq.fattura&select=mese').catch(() => [])
+  ]);
+  const mesiDoc = new Set((docs || []).map(d => d.mese));
+  return (rows || []).map(r => ({
+    ...r,
+    origine: mesiDoc.has(String(r.mese || '').slice(0, 7)) ? 'utente' : 'storico'
+  }));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// OROLOGIO
+// ═══════════════════════════════════════════════════════════════
+function updateClock() {
+  const now = new Date();
+  const el = document.getElementById('now');
+  if (el) el.textContent = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ═══════════════════════════════════════════════════════════════
+// SELETTORE DATA GLOBALE (novità #2: guida TUTTA la pagina)
+// ═══════════════════════════════════════════════════════════════
+let selectedDate = todayDate();
+
+// Modalità vista: 'giorno' (dettaglio orario) · 'mese' (mese intero senza
+// impostare date) · 'periodo' (da–a libero). Mese e Periodo condividono la
+// pipeline degli aggregati giornalieri (rangeMode = true) e comandano
+// insieme il grafico produzione E la sezione ricavi.
+let viewMode = 'giorno';
+let rangeMode = false;           // true per 'mese' e 'periodo'
+let rangeStart = null;
+let rangeEnd = null;
+let selectedMese = null;         // 'YYYY-MM' in modalità mese
+
+function isSelectedDateToday() {
+  return selectedDate.getTime() === todayDate().getTime();
+}
+function meseCorrente() {
+  return fmtDateForPicker(todayDate()).slice(0, 7);
+}
+function fmtRangeLabel() {
+  if (!rangeStart || !rangeEnd) return '';
+  const nGiorni = Math.round((rangeEnd - rangeStart) / 86400000) + 1;
+  if (viewMode === 'mese' && selectedMese) {
+    const lbl = new Date(selectedMese + '-01').toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+    return `${lbl} · ${nGiorni} gg`;
+  }
+  return `${rangeStart.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })} → ${rangeEnd.toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })} · ${nGiorni} gg`;
+}
+
+function syncDateUi() {
+  document.getElementById('mode-giorno-btn').classList.toggle('active', viewMode === 'giorno');
+  document.getElementById('mode-mese-btn').classList.toggle('active', viewMode === 'mese');
+  document.getElementById('mode-periodo-btn').classList.toggle('active', viewMode === 'periodo');
+  document.getElementById('day-controls').style.display = viewMode === 'giorno' ? 'contents' : 'none';
+  document.getElementById('mese-controls').style.display = viewMode === 'mese' ? 'contents' : 'none';
+  document.getElementById('range-controls').style.display = viewMode === 'periodo' ? 'contents' : 'none';
+  const lbl = document.getElementById('date-label');
+
+  // La sezione ricavi segue la barra: tab visibili solo in modalità Giorno
+  const tabsBar = document.getElementById('bilancio-tabs');
+  if (tabsBar) tabsBar.style.display = rangeMode ? 'none' : '';
+  if (rangeMode && currentTab !== 'oggi') {
+    currentTab = 'oggi';
+    document.querySelectorAll('#bilancio-tabs .tab-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.tab === 'oggi'));
+  }
+
+  if (viewMode === 'mese') {
+    const mp = document.getElementById('mese-picker');
+    mp.max = meseCorrente();
+    if (selectedMese) mp.value = selectedMese;
+    document.getElementById('mese-next').disabled = (selectedMese === meseCorrente());
+    lbl.textContent = '🗓 ' + fmtRangeLabel();
+    lbl.classList.add('is-past');
+    const meseLbl = selectedMese
+      ? new Date(selectedMese + '-01').toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })
+      : '';
+    document.getElementById('live-kpi-title').textContent = 'Produzione fotovoltaica — ' + meseLbl;
+    document.getElementById('prod-chart-title').textContent = '📈 Produzione giornaliera — ' + meseLbl;
+    return;
+  }
+
+  if (viewMode === 'periodo') {
+    const rs = document.getElementById('range-start');
+    const re = document.getElementById('range-end');
+    rs.max = re.max = fmtDateForPicker(todayDate());
+    if (rangeStart) rs.value = fmtDateForPicker(rangeStart);
+    if (rangeEnd) re.value = fmtDateForPicker(rangeEnd);
+    lbl.textContent = '📆 ' + fmtRangeLabel();
+    lbl.classList.add('is-past');
+    document.getElementById('live-kpi-title').textContent = 'Produzione fotovoltaica — Periodo';
+    document.getElementById('prod-chart-title').textContent = '📈 Produzione giornaliera nel periodo';
+    return;
+  }
+
+  const picker = document.getElementById('date-picker');
+  picker.value = fmtDateForPicker(selectedDate);
+  picker.max = fmtDateForPicker(todayDate());
+  const isToday = isSelectedDateToday();
+  document.getElementById('date-today').classList.toggle('is-today', isToday);
+  document.getElementById('date-next').disabled = isToday;
+  lbl.textContent = isToday ? 'In tempo reale' : '⏪ ' + fmtDateForLabel(selectedDate);
+  lbl.classList.toggle('is-past', !isToday);
+  document.getElementById('live-kpi-title').textContent = isToday
+    ? 'Produzione fotovoltaica — Live'
+    : 'Produzione fotovoltaica — ' + fmtDateShort(selectedDate);
+  document.getElementById('prod-chart-title').textContent = isToday
+    ? '📈 Curva produzione oggi'
+    : '📈 Curva produzione — ' + fmtDateShort(selectedDate);
+}
+
+function setMode(m) {
+  if (viewMode === m) return;
+  viewMode = m;
+  rangeMode = (m !== 'giorno');
+  if (m === 'mese') {
+    if (!selectedMese) selectedMese = meseCorrente();
+    applyMese();
+    return;
+  }
+  if (m === 'periodo' && (!rangeStart || !rangeEnd)) {
+    // default: ultimi 7 giorni
+    rangeEnd = todayDate();
+    rangeStart = new Date(rangeEnd);
+    rangeStart.setDate(rangeStart.getDate() - 6);
+  }
+  syncDateUi();
+  refreshAllData();
+}
+
+// ── Modalità MESE: intervallo = mese intero (fino a oggi se in corso) ──
+function applyMese() {
+  if (selectedMese > meseCorrente()) selectedMese = meseCorrente();
+  const p = selectedMese.split('-');
+  const anno = parseInt(p[0]), mese0 = parseInt(p[1]) - 1;
+  rangeStart = new Date(anno, mese0, 1);
+  rangeEnd = new Date(anno, mese0 + 1, 0);
+  if (rangeEnd.getTime() > todayDate().getTime()) rangeEnd = todayDate();
+  syncDateUi();
+  refreshAllData();
+}
+function navMese(delta) {
+  const p = selectedMese.split('-');
+  const d = new Date(parseInt(p[0]), parseInt(p[1]) - 1 + delta, 1);
+  const nuovo = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  if (nuovo > meseCorrente()) return;
+  selectedMese = nuovo;
+  applyMese();
+}
+function onMesePickerChange() {
+  const val = document.getElementById('mese-picker').value;
+  if (!val) return;
+  selectedMese = val;
+  applyMese();
+}
+
+function applyRange() {
+  const rsVal = document.getElementById('range-start').value;
+  const reVal = document.getElementById('range-end').value;
+  if (!rsVal || !reVal) { alert('Seleziona entrambe le date del periodo.'); return; }
+  const p1 = rsVal.split('-'), p2 = reVal.split('-');
+  let s = new Date(parseInt(p1[0]), parseInt(p1[1]) - 1, parseInt(p1[2]));
+  let e = new Date(parseInt(p2[0]), parseInt(p2[1]) - 1, parseInt(p2[2]));
+  s.setHours(0, 0, 0, 0); e.setHours(0, 0, 0, 0);
+  if (s.getTime() > e.getTime()) [s, e] = [e, s];
+  if (e.getTime() > todayDate().getTime()) e = todayDate();
+  rangeStart = s; rangeEnd = e;
+  syncDateUi();
+  refreshAllData();
+}
+function setSelectedDate(d) {
+  d.setHours(0, 0, 0, 0);
+  if (d.getTime() > todayDate().getTime()) d = todayDate();
+  selectedDate = d;
+  viewMode = 'giorno';   // selezionare un giorno esce sempre da mese/periodo
+  rangeMode = false;
+  syncDateUi();
+  refreshAllData();
+}
+function navDate(deltaDays) {
+  const next = new Date(selectedDate);
+  next.setDate(next.getDate() + deltaDays);
+  if (next.getTime() > todayDate().getTime()) return;
+  setSelectedDate(next);
+}
+function onDatePickerChange() {
+  const val = document.getElementById('date-picker').value;
+  if (!val) return;
+  const p = val.split('-');
+  setSelectedDate(new Date(parseInt(p[0]), parseInt(p[1]) - 1, parseInt(p[2])));
+}
+function goToday() {
+  if (isSelectedDateToday()) return;
+  setSelectedDate(todayDate());
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SKELETON HELPERS (novità #7)
+// ═══════════════════════════════════════════════════════════════
+function skeletonKpi(n = 3) {
+  return Array.from({ length: n }, () => `
+    <div class="skeleton-card">
+      <div class="sk-line big"></div>
+      <div class="sk-line"></div>
+      <div class="sk-line small"></div>
+    </div>`).join('');
+}
+function showSkeletons() {
+  document.getElementById('live-kpi').innerHTML = skeletonKpi(3);
+  document.getElementById('bilancio-kpi').innerHTML = skeletonKpi(3);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SPARKLINE SVG (novità #4)
+// ═══════════════════════════════════════════════════════════════
+function sparklineSvg(values, color) {
+  if (!values || values.length < 2) return '';
+  const w = 120, h = 26, pad = 2;
+  const min = Math.min(...values), max = Math.max(...values);
+  const range = (max - min) || 1;
+  const pts = values.map((v, i) => {
+    const x = pad + (i / (values.length - 1)) * (w - pad * 2);
+    const y = h - pad - ((v - min) / range) * (h - pad * 2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.8"
+      stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
+  </svg>`;
+}
+function deltaChip(deltaPct, invert = false) {
+  if (deltaPct === null || isNaN(deltaPct)) return '';
+  const up = deltaPct >= 0;
+  const good = invert ? !up : up;   // invert=true: salire è "male" (es. costi)
+  const cls = Math.abs(deltaPct) < 0.5 ? 'flat' : (good ? 'up' : 'down');
+  const arrow = Math.abs(deltaPct) < 0.5 ? '→' : (up ? '↑' : '↓');
+  return `<span class="delta-chip ${cls}">${arrow} ${fmt(Math.abs(deltaPct), 1)}%</span>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HERO ATTIVO (novità #1) + badge autoconsumo
+// ═══════════════════════════════════════════════════════════════
+const SOGLIA_AUTOCONSUMO_EUR_MWH = 100;   // sopra questa soglia conviene autoconsumare
+
+// Hero in modalità PERIODO: totali dell'intervallo
+function renderHeroRange(daily) {
+  const box = document.getElementById('hero-kpis');
+  document.getElementById('hero-badge').style.display = 'none';
+  const totKwh = daily.reduce((s, r) => s + (r.produzione_kwh || 0), 0);
+  const totEur = daily.reduce((s, r) => s + (r.ricavo_eur || 0), 0);
+  const prezzoMedio = totKwh > 0 ? totEur * 1000 / totKwh : 0; // €/MWh pesato
+  const mediaGiorno = daily.length ? totKwh / daily.length : 0;
+
+  box.innerHTML = `
+    <div class="hero-kpi">
+      <div class="hero-kpi-value">${fmt(totKwh / 1000, 1)}<span class="hero-kpi-unit">MWh</span></div>
+      <div class="hero-kpi-label">☀ Energia nel periodo</div>
+    </div>
+    <div class="hero-kpi">
+      <div class="hero-kpi-value">${fmt(totEur, 0)}<span class="hero-kpi-unit">€</span></div>
+      <div class="hero-kpi-label">💶 Ricavo RID periodo</div>
+    </div>
+    <div class="hero-kpi">
+      <div class="hero-kpi-value">${fmt(prezzoMedio, 1)}<span class="hero-kpi-unit">€/MWh</span></div>
+      <div class="hero-kpi-label">📊 Prezzo medio pesato</div>
+    </div>
+    <div class="hero-kpi">
+      <div class="hero-kpi-value">${fmt(mediaGiorno / 1000, 2)}<span class="hero-kpi-unit">MWh/gg</span></div>
+      <div class="hero-kpi-label">Ø Media giornaliera</div>
+    </div>`;
+}
+
+function renderHero(prodRows, bilOrario) {
+  const box = document.getElementById('hero-kpis');
+  const last = prodRows.length ? prodRows[prodRows.length - 1] : null;
+  const kW = last ? last.potenza_kw : 0;
+  const kwhOggi = last ? last.energia_oggi_kwh : 0;
+  const ricavoOggi = bilOrario.reduce((s, r) => s + (r.ricavo_teorico_eur || 0), 0);
+  const isToday = isSelectedDateToday();
+
+  // prezzo zonale dell'ora corrente (o ultimo disponibile)
+  const oraNow = new Date().getHours();
+  let prezzoOra = null;
+  if (bilOrario.length) {
+    const rowNow = bilOrario.find(r => r.ora === oraNow);
+    prezzoOra = rowNow ? rowNow.prezzo_eur_mwh : bilOrario[bilOrario.length - 1].prezzo_eur_mwh;
+  }
+
+  box.innerHTML = `
+    <div class="hero-kpi">
+      <div class="hero-kpi-value">${fmt(kW, 0)}<span class="hero-kpi-unit">kW</span></div>
+      <div class="hero-kpi-label">⚡ ${isToday ? 'Potenza adesso' : 'Picco del giorno'}</div>
+    </div>
+    <div class="hero-kpi">
+      <div class="hero-kpi-value">${kwhOggi >= 1000 ? fmt(kwhOggi / 1000, 2) : fmt(kwhOggi, 0)}<span class="hero-kpi-unit">${kwhOggi >= 1000 ? 'MWh' : 'kWh'}</span></div>
+      <div class="hero-kpi-label">☀ Energia ${isToday ? 'oggi' : fmtDateShort(selectedDate)}</div>
+    </div>
+    <div class="hero-kpi">
+      <div class="hero-kpi-value">${fmt(ricavoOggi, 0)}<span class="hero-kpi-unit">€</span></div>
+      <div class="hero-kpi-label">💶 Ricavo RID ${isToday ? 'oggi' : 'del giorno'}</div>
+    </div>
+    <div class="hero-kpi">
+      <div class="hero-kpi-value">${prezzoOra !== null ? fmt(prezzoOra, 0) : '—'}<span class="hero-kpi-unit">€/MWh</span></div>
+      <div class="hero-kpi-label">📊 Prezzo zonale ${isToday ? 'ora' : 'ultima h'}</div>
+    </div>`;
+
+  // Badge decisionale autoconsumo (solo su "oggi")
+  const badge = document.getElementById('hero-badge');
+  const badgeText = document.getElementById('hero-badge-text');
+  if (isToday && prezzoOra !== null) {
+    badge.style.display = 'inline-flex';
+    if (prezzoOra >= SOGLIA_AUTOCONSUMO_EUR_MWH) {
+      badge.classList.remove('warn');
+      badgeText.textContent = `Prezzo alto (${fmt(prezzoOra, 0)} €/MWh): conviene immettere in rete`;
+    } else if (prezzoOra <= 20) {
+      badge.classList.add('warn');
+      badgeText.textContent = `Prezzo quasi zero: massimizza l'autoconsumo adesso`;
+    } else {
+      badge.classList.add('warn');
+      badgeText.textContent = `Prezzo medio (${fmt(prezzoOra, 0)} €/MWh): autoconsumo preferibile`;
+    }
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// KPI LIVE con delta% + sparkline (novità #4)
+// ═══════════════════════════════════════════════════════════════
+// KPI in modalità PERIODO
+function renderKpiRange(daily) {
+  const box = document.getElementById('live-kpi');
+  if (!daily.length) {
+    box.innerHTML = '<div class="state-msg">Nessun dato nel periodo selezionato.</div>';
+    return;
+  }
+  const totKwh = daily.reduce((s, r) => s + (r.produzione_kwh || 0), 0);
+  const best = [...daily].sort((a, b) => b.produzione_kwh - a.produzione_kwh)[0];
+  const bestLbl = new Date(best.data).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
+  const oreZero = daily.reduce((s, r) => s + (r.ore_a_zero || 0), 0);
+  const spark = daily.map(r => r.produzione_kwh);
+
+  box.innerHTML = `
+    <div class="kpi-card accent-blue">
+      <div><span class="kpi-value">${fmt(totKwh / 1000, 1)}</span><span class="kpi-unit">MWh</span></div>
+      <div class="kpi-label">☀ Energia totale periodo</div>
+      <div class="kpi-sub">${daily.length} giorni · ${fmt(totKwh, 0)} kWh</div>
+      <div class="kpi-spark">${sparklineSvg(spark, '#3b5bdb')}</div>
+    </div>
+    <div class="kpi-card accent-green">
+      <div><span class="kpi-value">${fmt(best.produzione_kwh / 1000, 2)}</span><span class="kpi-unit">MWh</span></div>
+      <div class="kpi-label">🏆 Miglior giorno</div>
+      <div class="kpi-sub">${bestLbl} · ${fmt(best.ricavo_eur, 2)} € di ricavo</div>
+    </div>
+    <div class="kpi-card accent-amber">
+      <div><span class="kpi-value">${oreZero}</span><span class="kpi-unit">h</span></div>
+      <div class="kpi-label">⚠️ Ore a prezzo zero</div>
+      <div class="kpi-sub">nel periodo · duck curve CSUD</div>
+    </div>`;
+}
+
+function renderKpi(prodRows, prodIeriRows, giorniRows) {
+  const box = document.getElementById('live-kpi');
+  if (!prodRows.length) {
+    box.innerHTML = '<div class="state-msg">Nessun dato per questa data.</div>';
+    return;
+  }
+  const last = prodRows[prodRows.length - 1];
+  const kW = last.potenza_kw || 0;
+  const kwhGiorno = last.energia_oggi_kwh || 0;
+  const lifetimeMWh = (last.energia_totale_kwh || 0) / 1000;
+  let peakKw = 0, peakTs = null;
+  prodRows.forEach(r => { if (r.potenza_kw > peakKw) { peakKw = r.potenza_kw; peakTs = r.ts; } });
+
+  // delta vs giorno precedente (a parità di ora se oggi)
+  let kwhIeri = 0;
+  if (prodIeriRows.length) {
+    if (isSelectedDateToday()) {
+      const nowH = new Date().getHours() + new Date().getMinutes() / 60;
+      const fino = prodIeriRows.filter(r => {
+        const d = new Date(r.ts);
+        return (d.getHours() + d.getMinutes() / 60) <= nowH;
+      });
+      kwhIeri = fino.length ? fino[fino.length - 1].energia_oggi_kwh : 0;
+    } else {
+      kwhIeri = prodIeriRows[prodIeriRows.length - 1].energia_oggi_kwh;
+    }
+  }
+  const deltaKwh = kwhIeri > 0 ? ((kwhGiorno - kwhIeri) / kwhIeri) * 100 : null;
+
+  // sparkline: energia degli ultimi 7 giorni (dal bilancio giornaliero)
+  const ultimi7 = (giorniRows || []).slice(0, 7).reverse().map(r => r.produzione_mwh);
+
+  const isToday = isSelectedDateToday();
+  box.innerHTML = `
+    <div class="kpi-card accent-blue">
+      <div class="kpi-head">
+        <div><span class="kpi-value">${fmt(isToday ? kW : peakKw, 0)}</span><span class="kpi-unit">kW</span></div>
+      </div>
+      <div class="kpi-label">${isToday ? '⚡ Potenza istantanea' : '📈 Picco potenza'}</div>
+      <div class="kpi-sub">${isToday ? 'agg. ' + fmtTime(last.ts) : 'alle ' + (peakTs ? fmtTime(peakTs) : '—')}</div>
+    </div>
+    <div class="kpi-card accent-green">
+      <div class="kpi-head">
+        <div><span class="kpi-value">${kwhGiorno >= 1000 ? fmt(kwhGiorno / 1000, 2) : fmt(kwhGiorno, 0)}</span><span class="kpi-unit">${kwhGiorno >= 1000 ? 'MWh' : 'kWh'}</span></div>
+        ${deltaChip(deltaKwh)}
+      </div>
+      <div class="kpi-label">☀ Energia ${isToday ? 'oggi' : 'del giorno'}</div>
+      <div class="kpi-sub">${deltaKwh !== null ? 'vs giorno precedente a pari ora' : fmt(kwhGiorno, 0) + ' kWh'}</div>
+      <div class="kpi-spark">${sparklineSvg(ultimi7, '#12b886')}</div>
+    </div>
+    <div class="kpi-card accent-amber">
+      <div class="kpi-head">
+        <div><span class="kpi-value">${fmt(lifetimeMWh >= 1000 ? lifetimeMWh / 1000 : lifetimeMWh, 1)}</span><span class="kpi-unit">${lifetimeMWh >= 1000 ? 'GWh' : 'MWh'}</span></div>
+      </div>
+      <div class="kpi-label">∑ Energia lifetime</div>
+      <div class="kpi-sub">dall'installazione</div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CURVA PRODUZIONE: confronto ieri (novità #3) + zoom (novità #5)
+// ═══════════════════════════════════════════════════════════════
+let chartInstance = null;
+
+function resetProdZoom() {
+  if (chartInstance) chartInstance.resetZoom();
+  document.getElementById('zoom-reset').style.display = 'none';
+}
+
+const prodZoomConfig = {
+  zoom: {
+    wheel: { enabled: true },
+    pinch: { enabled: true },
+    mode: 'x',
+    onZoomComplete: () => { document.getElementById('zoom-reset').style.display = ''; }
+  },
+  pan: { enabled: true, mode: 'x' }
+};
+
+// Curva intraday del giorno selezionato
+function renderChart(rows) {
+  const ctx = document.getElementById('prodChart').getContext('2d');
+  if (chartInstance) chartInstance.destroy();
+  if (!rows.length) {
+    document.getElementById('chart-legend').textContent = 'Nessun dato';
+    return;
+  }
+
+  const labels = rows.map(r => fmtTime(r.ts));
+  const data = rows.map(r => r.potenza_kw || 0);
+
+  const gradient = ctx.createLinearGradient(0, 0, 0, 260);
+  gradient.addColorStop(0, 'rgba(59, 91, 219, 0.35)');
+  gradient.addColorStop(1, 'rgba(59, 91, 219, 0.02)');
+
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Potenza (kW)',
+        data,
+        borderColor: '#3b5bdb',
+        backgroundColor: gradient,
+        borderWidth: 2.5,
+        fill: true,
+        tension: 0.35,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: '#3b5bdb',
+        pointHoverBorderColor: '#fff',
+        pointHoverBorderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a2035', titleColor: '#fff', bodyColor: '#fff',
+          padding: 10, borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1,
+          callbacks: { label: (c) => ` ${fmt(c.parsed.y, 0)} kW` }
+        },
+        zoom: prodZoomConfig
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: '#adb5bd', font: { family: 'DM Mono', size: 10 }, maxTicksLimit: 8, autoSkip: true }
+        },
+        y: {
+          grid: { color: 'rgba(15,31,53,0.04)' },
+          ticks: { color: '#adb5bd', font: { family: 'DM Mono', size: 10 }, callback: (v) => fmt(v, 0) }
+        }
+      },
+      interaction: { mode: 'nearest', intersect: false, axis: 'x' }
+    }
+  });
+
+  document.getElementById('prodChart').ondblclick = resetProdZoom;
+
+  const peak = Math.max(...data);
+  const peakIdx = data.indexOf(peak);
+  document.getElementById('chart-legend').textContent =
+    `Picco: ${fmt(peak, 0)} kW alle ${labels[peakIdx]}`;
+}
+
+// Modalità PERIODO: barre di energia giornaliera, click = drill-down sul giorno
+function renderChartRange(daily) {
+  const ctx = document.getElementById('prodChart').getContext('2d');
+  if (chartInstance) chartInstance.destroy();
+  if (!daily.length) {
+    document.getElementById('chart-legend').textContent = 'Nessun dato';
+    return;
+  }
+
+  const labels = daily.map(r => new Date(r.data).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }));
+  const data = daily.map(r => (r.produzione_kwh || 0) / 1000); // MWh
+
+  chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Energia (MWh)',
+        data,
+        backgroundColor: 'rgba(59, 91, 219, 0.75)',
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a2035', titleColor: '#fff', bodyColor: '#fff',
+          padding: 10, borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1,
+          callbacks: { label: (c) => ` ${fmt(c.parsed.y, 2)} MWh · clicca per il dettaglio` }
+        },
+        zoom: prodZoomConfig
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: '#adb5bd', font: { family: 'DM Mono', size: 10 }, maxTicksLimit: 15, autoSkip: true }
+        },
+        y: {
+          grid: { color: 'rgba(15,31,53,0.04)' },
+          ticks: { color: '#adb5bd', font: { family: 'DM Mono', size: 10 }, callback: (v) => fmt(v, 1) }
+        }
+      },
+      onClick: (evt, elements) => {
+        if (!elements.length) return;
+        drillDownToDate(daily[elements[0].index].data);
+      },
+      onHover: (evt, elements) => {
+        evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+      }
+    }
+  });
+
+  document.getElementById('prodChart').ondblclick = resetProdZoom;
+
+  const best = [...daily].sort((a, b) => b.produzione_kwh - a.produzione_kwh)[0];
+  document.getElementById('chart-legend').textContent =
+    `Miglior giorno: ${new Date(best.data).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })} (${fmt(best.produzione_kwh / 1000, 2)} MWh) · clicca una barra per il dettaglio orario`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONFRONTO VS PVSYST (modalità Mese)
+// Produzione reale (bilancio_giornaliero) vs attesa contrattuale
+// pro-rata sui giorni disponibili; irraggiamento reale SARAH-3
+// (tabella irraggiamento_giorno) vs GlobHor PVSyst; indice di
+// performance meteo-corretto = (E reale/attesa)/(GHI reale/atteso).
+// Confronto su GHI orizzontale: niente trasposizione sul piano
+// (tracker monoassiale), così le due serie sono omogenee.
+// ═══════════════════════════════════════════════════════════════
+async function fetchIrraggiamentoMese(mese) {
+  try {
+    const p = mese.split('-');
+    const last = new Date(parseInt(p[0]), parseInt(p[1]), 0).getDate();
+    return await supaGet(
+      `irraggiamento_giorno?data=gte.${mese}-01&data=lte.${mese}-${String(last).padStart(2, '0')}&order=data.asc`
+    ) || [];
+  } catch (err) {
+    console.warn('irraggiamento_giorno non disponibile', err);
+    return null;   // null = tabella assente/pipeline non attiva
+  }
+}
+
+async function renderPvsystMese(daily) {
+  const sec = document.getElementById('sec-pvsyst');
+  if (viewMode !== 'mese' || !selectedMese) { sec.style.display = 'none'; return; }
+  const p = selectedMese.split('-');
+  const anno = parseInt(p[0]), meseNum = parseInt(p[1]);
+  const base = PVSYST.mesi[meseNum];
+  if (!base || !daily || !daily.length) { sec.style.display = 'none'; return; }
+  sec.style.display = '';
+
+  const giorniMese = new Date(anno, meseNum, 0).getDate();
+  const metaMese = new Date(anno, meseNum - 1, 15);
+  const degrado = pvsystFattoreDegrado(metaMese);
+  const annoEsercizio = pvsystAnnoEsercizio(metaMese);
+
+  // Produzione reale e attesa pro-rata sui giorni con dati
+  const nGiorniProd = daily.length;
+  const realeKwh = daily.reduce((s, r) => s + (r.produzione_kwh || 0), 0);
+  const attesaKwh = base.egrid * degrado * (nGiorniProd / giorniMese);
+  const scostProd = attesaKwh > 0 ? (realeKwh - attesaKwh) / attesaKwh * 100 : null;
+
+  // Irraggiamento: confronto sull'INTERSEZIONE dei giorni disponibili
+  const irr = await fetchIrraggiamentoMese(selectedMese);
+  let ghiReale = null, ghiAtteso = null, scostGhi = null, nGiorniComuni = 0, indicePerf = null;
+  if (irr && irr.length) {
+    const setProd = new Set(daily.map(r => r.data));
+    const comuni = irr.filter(r => setProd.has(r.data));
+    nGiorniComuni = comuni.length;
+    if (nGiorniComuni >= 5) {
+      ghiReale = comuni.reduce((s, r) => s + (parseFloat(r.ghi_kwh_m2) || 0), 0);
+      ghiAtteso = base.globhor * (nGiorniComuni / giorniMese);
+      scostGhi = (ghiReale - ghiAtteso) / ghiAtteso * 100;
+      // indice meteo-corretto sugli stessi giorni
+      const setComuni = new Set(comuni.map(c => c.data));
+      const realeComuni = daily.filter(r => setComuni.has(r.data))
+        .reduce((s, r) => s + (r.produzione_kwh || 0), 0);
+      const attesaComuni = base.egrid * degrado * (nGiorniComuni / giorniMese);
+      indicePerf = (realeComuni / attesaComuni) / (ghiReale / ghiAtteso) * 100;
+    }
+  }
+
+  const meseLbl = new Date(selectedMese + '-01').toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+  const parziale = nGiorniProd < giorniMese ? ` · pro-rata ${nGiorniProd}/${giorniMese} gg` : '';
+
+  const scostClass = scostProd === null ? 'accent-amber'
+    : (scostProd >= -3 ? 'accent-green' : (scostProd >= -8 ? 'accent-amber' : 'accent-blue'));
+
+  document.getElementById('pvsyst-kpi').innerHTML = `
+    <div class="kpi-card accent-blue">
+      <div><span class="kpi-value">${fmt(attesaKwh / 1000, 1)}</span><span class="kpi-unit">MWh</span></div>
+      <div class="kpi-label">📐 Attesa PVSyst</div>
+      <div class="kpi-sub">anno ${annoEsercizio} di esercizio${degrado < 1 ? ' · degrado ' + fmt((1 - degrado) * 100, 1) + '%' : ''}${parziale}</div>
+    </div>
+    <div class="kpi-card accent-green">
+      <div><span class="kpi-value">${fmt(realeKwh / 1000, 1)}</span><span class="kpi-unit">MWh</span></div>
+      <div class="kpi-label">☀ Produzione reale</div>
+      <div class="kpi-sub">${meseLbl} · ${nGiorniProd} giorni</div>
+    </div>
+    <div class="kpi-card ${scostClass}">
+      <div class="kpi-head">
+        <div><span class="kpi-value">${scostProd !== null ? (scostProd > 0 ? '+' : '') + fmt(scostProd, 1) : '—'}</span><span class="kpi-unit">%</span></div>
+      </div>
+      <div class="kpi-label">Δ Scostamento vs attesa</div>
+      <div class="kpi-sub">${scostProd !== null && scostProd < 0 ? 'sotto attesa' : 'in linea o sopra'}</div>
+    </div>`;
+
+  // Card meteo + analisi
+  const legend = document.getElementById('pvsyst-meteo-legend');
+  const analisi = document.getElementById('pvsyst-analisi');
+  if (irr === null) {
+    legend.textContent = 'pipeline non attiva';
+    analisi.innerHTML = `<span class="muted">Dato irraggiamento non disponibile: esegui <code>setup-irraggiamento.sql</code> su Supabase e attiva il workflow <code>irraggiamento.yml</code> (SARAH-3 via Open-Meteo). Poi lancia il backfill dal 2025-08-20.</span>`;
+    return;
+  }
+  if (scostGhi === null) {
+    legend.textContent = `${irr.length} giorni in tabella`;
+    analisi.innerHTML = `<span class="muted">Giorni di irraggiamento insufficienti per ${meseLbl} (servono ≥5 giorni sovrapposti alla produzione). Il satellite SARAH-3 ha ~5 giorni di latenza: normale a inizio mese.</span>`;
+    return;
+  }
+
+  legend.textContent = `${nGiorniComuni} giorni confrontati · SARAH-3 ~5 km`;
+  const perfClass = indicePerf >= 97 ? '✅' : (indicePerf >= 92 ? '⚠️' : '🔴');
+  const spiegato = indicePerf >= 97;
+  analisi.innerHTML = `
+    Irraggiamento reale (GHI): <strong>${fmt(ghiReale, 1)} kWh/m²</strong> contro
+    <strong>${fmt(ghiAtteso, 1)}</strong> attesi da PVSyst
+    (<strong>${scostGhi > 0 ? '+' : ''}${fmt(scostGhi, 1)}%</strong>).<br>
+    ${perfClass} <strong>Indice di performance meteo-corretto: ${fmt(indicePerf, 1)}%</strong> —
+    ${spiegato
+      ? 'lo scostamento di produzione è interamente spiegato dal meteo: impianto in linea con la baseline.'
+      : (indicePerf >= 92
+        ? 'il meteo non spiega tutto lo scostamento: monitorare (sporcamento, disponibilità, clipping).'
+        : 'scostamento NON spiegato dal meteo: da approfondire con O&M (confrontare specific yield per inverter su FusionSolar).')}
+    <span class="muted" style="font-size:12px;display:block;margin-top:6px">
+      Metodo: (produzione reale/attesa) ÷ (GHI reale/GlobHor PVSyst), stessi ${nGiorniComuni} giorni.
+      Confronto su piano orizzontale; incertezza satellitare mensile ~3-5%.
+    </span>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BILANCIO RID — tab + drill-down (novità #2)
+// ═══════════════════════════════════════════════════════════════
+let bilancioChartInstance = null;
+let currentTab = 'oggi';
+const bilancioCache = { oggi: null, giorni: null, mesi: null, periodo: null };
+
+document.getElementById('bilancio-tabs').addEventListener('click', (e) => {
+  const btn = e.target.closest('.tab-btn');
+  if (!btn) return;
+  const tab = btn.dataset.tab;
+  if (tab === currentTab) return;
+  document.querySelectorAll('#bilancio-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentTab = tab;
+  renderBilancioCurrentTab();
+});
+
+function switchToTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('#bilancio-tabs .tab-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.tab === tab));
+  renderBilancioCurrentTab();
+}
+
+// DRILL-DOWN: da barra "30 giorni" (o riga tabella) al dettaglio orario
+function drillDownToDate(dateStr) {
+  const p = dateStr.split('-');
+  const d = new Date(parseInt(p[0]), parseInt(p[1]) - 1, parseInt(p[2]));
+  switchToTab('oggi');
+  setSelectedDate(d);   // aggiorna TUTTA la pagina su quel giorno
+  document.getElementById('sec-data').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderBilancioCurrentTab() {
+  const detailsBox = document.getElementById('bilancio-details');
+  const titleEl = document.getElementById('bilancio-chart-title');
+  const hintEl = document.getElementById('bilancio-hint');
+  hintEl.style.display = 'none';
+
+  if (currentTab === 'oggi') {
+    // Modalità PERIODO: il primo tab mostra gli incassi aggregati da–a
+    if (rangeMode) {
+      const rows = bilancioCache.periodo || [];
+      titleEl.textContent = '📊 Ricavo giornaliero — ' + fmtRangeLabel();
+      hintEl.style.display = '';
+      detailsBox.style.display = 'none';
+      if (!rows.length) {
+        document.getElementById('bilancio-kpi').innerHTML = '<div class="state-msg">Nessun dato nel periodo.</div>';
+        if (bilancioChartInstance) { bilancioChartInstance.destroy(); bilancioChartInstance = null; }
+        return;
+      }
+      renderBilancioPeriodoKpi(rows);
+      renderBilancioPeriodoChart(rows);
+      return;
+    }
+    const rows = bilancioCache.oggi;
+    const isToday = isSelectedDateToday();
+    titleEl.textContent = isToday
+      ? '📊 Produzione vs prezzo zonale orario'
+      : '📊 Produzione vs prezzo zonale — ' + fmtDateShort(selectedDate);
+    detailsBox.style.display = 'none';
+    // null = vista storica `bilancio_orario` assente su Supabase
+    if (rows === null) {
+      document.getElementById('bilancio-kpi').innerHTML =
+        '<div class="state-msg">Storico bilancio orario non disponibile per questa data. ' +
+        'Per abilitarlo, su Supabase serve una vista <code>bilancio_orario</code> ' +
+        'con campi <code>data, ora, produzione_kwh, prezzo_eur_mwh, ricavo_teorico_eur</code>.</div>';
+      if (bilancioChartInstance) { bilancioChartInstance.destroy(); bilancioChartInstance = null; }
+      return;
+    }
+    if (!rows.length) {
+      document.getElementById('bilancio-kpi').innerHTML = '<div class="state-msg">Nessun dato per questa data.</div>';
+      if (bilancioChartInstance) { bilancioChartInstance.destroy(); bilancioChartInstance = null; }
+      return;
+    }
+    renderBilancioOggiKpi(rows);
+    renderBilancioOggiChart(rows);
+  } else if (currentTab === 'giorni') {
+    const rows = bilancioCache.giorni || [];
+    titleEl.textContent = '📊 Ricavo giornaliero ultimi 30 giorni';
+    hintEl.style.display = '';
+    if (!rows.length) {
+      document.getElementById('bilancio-kpi').innerHTML = '<div class="state-msg">Nessun dato disponibile.</div>';
+      detailsBox.style.display = 'none';
+      return;
+    }
+    renderBilancioGiorniKpi(rows);
+    renderBilancioGiorniChart(rows);
+    renderBilancioGiorniTable(rows);
+  } else {
+    const rows = bilancioCache.mesi || [];
+    titleEl.textContent = '📊 Ricavo mensile storico';
+    if (!rows.length) {
+      document.getElementById('bilancio-kpi').innerHTML = '<div class="state-msg">Nessun dato disponibile.</div>';
+      detailsBox.style.display = 'none';
+      return;
+    }
+    renderBilancioMesiKpi(rows);
+    renderBilancioMesiChart(rows);
+    renderBilancioMesiTable(rows);
+  }
+}
+
+// ── MODALITÀ PERIODO: incassi aggregati da–a ──────────────────
+function renderBilancioPeriodoKpi(rows) {
+  const totKwh = rows.reduce((s, r) => s + (r.produzione_kwh || 0), 0);
+  const totEur = rows.reduce((s, r) => s + (r.ricavo_eur || 0), 0);
+  const prezzoMedio = totKwh > 0 ? totEur * 1000 / totKwh : 0;
+  const mediaGiorno = rows.length ? totEur / rows.length : 0;
+
+  document.getElementById('bilancio-kpi').innerHTML = `
+    <div class="kpi-card accent-blue">
+      <div><span class="kpi-value">${fmt(totKwh / 1000, 1)}</span><span class="kpi-unit">MWh</span></div>
+      <div class="kpi-label">☀ Prodotti nel periodo</div>
+      <div class="kpi-sub">${rows.length} giorni · immessi in rete</div>
+    </div>
+    <div class="kpi-card accent-amber">
+      <div><span class="kpi-value">${fmt(prezzoMedio, 1)}</span><span class="kpi-unit">€/MWh</span></div>
+      <div class="kpi-label">📊 Prezzo medio MGP CSUD</div>
+      <div class="kpi-sub">pesato sulla produzione</div>
+    </div>
+    <div class="kpi-card accent-green">
+      <div><span class="kpi-value">${fmt(totEur, 0)}</span><span class="kpi-unit">€</span></div>
+      <div class="kpi-label">💶 Ricavo RID periodo</div>
+      <div class="kpi-sub">media ${fmt(mediaGiorno, 2)} €/giorno</div>
+    </div>`;
+}
+
+function renderBilancioPeriodoChart(rows) {
+  const labels = rows.map(r => new Date(r.data).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }));
+  const dataEur = rows.map(r => r.ricavo_eur || 0);
+  const dataPrezzo = rows.map(r => r.prezzo_medio_pesato_eur_mwh || 0);
+
+  if (bilancioChartInstance) bilancioChartInstance.destroy();
+  const ctx = document.getElementById('bilancioChart').getContext('2d');
+
+  const opts = bilancioChartOptions('€', '€/MWh', (c) => {
+    const v = c.parsed.y;
+    return c.dataset.label.includes('Ricavo') ? ` ${fmt(v, 2)} €` : ` ${fmt(v, 1)} €/MWh`;
+  }, '#12b886', '#f59f00');
+  opts.onClick = (evt, elements) => {
+    if (!elements.length) return;
+    drillDownToDate(rows[elements[0].index].data);
+  };
+  opts.onHover = (evt, elements) => {
+    evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+  };
+
+  bilancioChartInstance = new Chart(ctx, {
+    data: {
+      labels,
+      datasets: [
+        { type: 'bar', label: 'Ricavo (€)', data: dataEur,
+          backgroundColor: 'rgba(18, 184, 134, 0.8)', borderRadius: 4, yAxisID: 'y', order: 2 },
+        { type: 'line', label: 'Prezzo medio pesato (€/MWh)', data: dataPrezzo,
+          borderColor: '#f59f00', backgroundColor: 'rgba(245, 159, 0, 0.08)',
+          borderWidth: 2.5, tension: 0.3, pointRadius: 3,
+          pointBackgroundColor: '#f59f00', pointBorderColor: '#fff',
+          pointBorderWidth: 1.5, yAxisID: 'y1', order: 1, fill: false }
+      ]
+    },
+    options: opts
+  });
+
+  const best = [...rows].sort((a, b) => b.ricavo_eur - a.ricavo_eur)[0];
+  document.getElementById('bilancio-legend').textContent = best
+    ? `Miglior giorno: ${new Date(best.data).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })} (${fmt(best.ricavo_eur, 2)} €)`
+    : '—';
+}
+
+// ── TAB: GIORNO ───────────────────────────────────────────────
+function renderBilancioOggiKpi(rows) {
+  const totKwh = rows.reduce((s, r) => s + (parseFloat(r.produzione_kwh) || 0), 0);
+  const totEur = rows.reduce((s, r) => s + (parseFloat(r.ricavo_teorico_eur) || 0), 0);
+  let prezzoMedio = totKwh > 0 ? (totEur * 1000) / totKwh : 0;
+  const totMwh = totKwh / 1000;
+  const dataLabel = isSelectedDateToday() ? 'oggi' : 'il ' + fmtDateShort(selectedDate);
+
+  document.getElementById('bilancio-kpi').innerHTML = `
+    <div class="kpi-card accent-blue">
+      <div><span class="kpi-value">${totMwh >= 1 ? fmt(totMwh, 2) : fmt(totKwh, 0)}</span><span class="kpi-unit">${totMwh >= 1 ? 'MWh' : 'kWh'}</span></div>
+      <div class="kpi-label">☀ Prodotti ${dataLabel}</div>
+      <div class="kpi-sub">immessi in rete (vendita GSE)</div>
+    </div>
+    <div class="kpi-card accent-amber">
+      <div><span class="kpi-value">${fmt(prezzoMedio, 1)}</span><span class="kpi-unit">€/MWh</span></div>
+      <div class="kpi-label">📊 Prezzo medio MGP CSUD</div>
+      <div class="kpi-sub">pesato sulla produzione</div>
+    </div>
+    <div class="kpi-card accent-green">
+      <div><span class="kpi-value">${fmt(totEur, 2)}</span><span class="kpi-unit">€</span></div>
+      <div class="kpi-label">💶 Ricavo teorico ${dataLabel}</div>
+      <div class="kpi-sub">Ritiro Dedicato GSE</div>
+    </div>`;
+}
+
+function renderBilancioOggiChart(rows) {
+  const labels = rows.map(r => String(r.ora).padStart(2, '0') + ':00');
+  const dataKwh = rows.map(r => parseFloat(r.produzione_kwh) || 0);
+  const dataPrezzo = rows.map(r => parseFloat(r.prezzo_eur_mwh) || 0);
+
+  if (bilancioChartInstance) bilancioChartInstance.destroy();
+  const ctx = document.getElementById('bilancioChart').getContext('2d');
+
+  bilancioChartInstance = new Chart(ctx, {
+    data: {
+      labels,
+      datasets: [
+        { type: 'bar', label: 'Produzione (kWh)', data: dataKwh,
+          backgroundColor: 'rgba(59, 91, 219, 0.75)', borderRadius: 4, yAxisID: 'y', order: 2 },
+        { type: 'line', label: 'Prezzo MGP (€/MWh)', data: dataPrezzo,
+          borderColor: '#12b886', backgroundColor: 'rgba(18, 184, 134, 0.08)',
+          borderWidth: 2.5, tension: 0.3, pointRadius: 3,
+          pointBackgroundColor: '#12b886', pointBorderColor: '#fff',
+          pointBorderWidth: 1.5, yAxisID: 'y1', order: 1, fill: false }
+      ]
+    },
+    options: bilancioChartOptions('kWh', '€/MWh', (c) => {
+      const v = c.parsed.y;
+      return c.dataset.label.includes('Produzione') ? ` ${fmt(v, 1)} kWh` : ` ${fmt(v, 2)} €/MWh`;
+    }, '#3b5bdb', '#12b886')   // sinistra = produzione (barre BLU), destra = prezzo (linea VERDE)
+  });
+
+  const prezziNonZero = dataPrezzo.filter(p => p > 0);
+  const peakEur = prezziNonZero.length ? Math.max(...prezziNonZero) : 0;
+  const nZero = dataPrezzo.filter(p => p === 0).length;
+  document.getElementById('bilancio-legend').textContent = nZero > 0
+    ? `Max ${fmt(peakEur, 0)} €/MWh · ${nZero} h a 0 €/MWh`
+    : `Max ${fmt(peakEur, 0)} €/MWh`;
+}
+
+// ── TAB: 30 GIORNI (con click drill-down) ─────────────────────
+function renderBilancioGiorniKpi(rows) {
+  const totMwh = rows.reduce((s, r) => s + (parseFloat(r.produzione_mwh) || 0), 0);
+  const totEur = rows.reduce((s, r) => s + (parseFloat(r.ricavo_eur) || 0), 0);
+  const totOreZero = rows.reduce((s, r) => s + (parseInt(r.ore_a_zero) || 0), 0);
+  const media = rows.length ? totEur / rows.length : 0;
+
+  document.getElementById('bilancio-kpi').innerHTML = `
+    <div class="kpi-card accent-blue">
+      <div><span class="kpi-value">${fmt(totMwh, 1)}</span><span class="kpi-unit">MWh</span></div>
+      <div class="kpi-label">☀ Produzione totale</div>
+      <div class="kpi-sub">${rows.length} giorni registrati</div>
+    </div>
+    <div class="kpi-card accent-green">
+      <div><span class="kpi-value">${fmt(totEur, 0)}</span><span class="kpi-unit">€</span></div>
+      <div class="kpi-label">💶 Ricavo totale</div>
+      <div class="kpi-sub">media ${fmt(media, 2)} €/giorno</div>
+    </div>
+    <div class="kpi-card accent-amber">
+      <div><span class="kpi-value">${totOreZero}</span><span class="kpi-unit">h</span></div>
+      <div class="kpi-label">⚠️ Ore a prezzo zero</div>
+      <div class="kpi-sub">duck curve CSUD</div>
+    </div>`;
+}
+
+function renderBilancioGiorniChart(rows) {
+  const sorted = [...rows].reverse();
+  const labels = sorted.map(r => new Date(r.data).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }));
+  const dataEur = sorted.map(r => parseFloat(r.ricavo_eur) || 0);
+  const dataMwh = sorted.map(r => parseFloat(r.produzione_mwh) || 0);
+
+  if (bilancioChartInstance) bilancioChartInstance.destroy();
+  const ctx = document.getElementById('bilancioChart').getContext('2d');
+
+  const opts = bilancioChartOptions('€', 'MWh', (c) => {
+    const v = c.parsed.y;
+    return c.dataset.label.includes('Ricavo') ? ` ${fmt(v, 2)} €` : ` ${fmt(v, 2)} MWh`;
+  });
+  // DRILL-DOWN: click su barra → apri dettaglio orario di quel giorno
+  opts.onClick = (evt, elements) => {
+    if (!elements.length) return;
+    const idx = elements[0].index;
+    drillDownToDate(sorted[idx].data);
+  };
+  opts.onHover = (evt, elements) => {
+    evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+  };
+
+  bilancioChartInstance = new Chart(ctx, {
+    data: {
+      labels,
+      datasets: [
+        { type: 'bar', label: 'Ricavo (€)', data: dataEur,
+          backgroundColor: 'rgba(18, 184, 134, 0.8)', borderRadius: 4, yAxisID: 'y', order: 2 },
+        { type: 'line', label: 'Produzione (MWh)', data: dataMwh,
+          borderColor: '#3b5bdb', backgroundColor: 'rgba(59, 91, 219, 0.08)',
+          borderWidth: 2.5, tension: 0.3, pointRadius: 3,
+          pointBackgroundColor: '#3b5bdb', pointBorderColor: '#fff',
+          pointBorderWidth: 1.5, yAxisID: 'y1', order: 1, fill: false }
+      ]
+    },
+    options: opts
+  });
+
+  const peakDay = [...rows].sort((a, b) => b.ricavo_eur - a.ricavo_eur)[0];
+  document.getElementById('bilancio-legend').textContent = peakDay
+    ? `Miglior giorno: ${new Date(peakDay.data).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })} (${fmt(peakDay.ricavo_eur, 2)} €)`
+    : '—';
+}
+
+function renderBilancioGiorniTable(rows) {
+  const html = `
+    <div class="details-table">
+      <table>
+        <thead>
+          <tr><th>Data</th><th class="num">Produzione</th><th class="num">Prezzo medio pesato</th><th class="num">Ore a 0€</th><th class="num">Ricavo</th></tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => {
+            const d = new Date(r.data).toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: 'short' });
+            return `
+              <tr class="clickable" onclick="drillDownToDate('${r.data}')" title="Apri dettaglio orario">
+                <td style="text-transform:capitalize">${d}</td>
+                <td class="num">${fmt(parseFloat(r.produzione_mwh) || 0, 2)} MWh</td>
+                <td class="num">${fmt(parseFloat(r.prezzo_medio_pesato_eur_mwh) || 0, 1)} €/MWh</td>
+                <td class="num">${(parseInt(r.ore_a_zero) || 0) > 0 ? `<span class="zero-tag">${r.ore_a_zero}h</span>` : '—'}</td>
+                <td class="num eur">${fmt(parseFloat(r.ricavo_eur) || 0, 2)} €</td>
+              </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  const box = document.getElementById('bilancio-details');
+  box.innerHTML = html;
+  box.style.display = 'block';
+}
+
+// ── TAB: MENSILE ──────────────────────────────────────────────
+function renderBilancioMesiKpi(rows) {
+  const totMwh = rows.reduce((s, r) => s + (parseFloat(r.produzione_mwh) || 0), 0);
+  const totEur = rows.reduce((s, r) => s + (parseFloat(r.ricavo_eur) || 0), 0);
+  const ultimo = rows[0], precedente = rows[1];
+  let deltaText = 'Primo mese registrato', deltaClass = 'accent-amber';
+  if (ultimo && precedente) {
+    const delta = parseFloat(ultimo.ricavo_eur) - parseFloat(precedente.ricavo_eur);
+    const deltaPct = precedente.ricavo_eur > 0 ? (delta / precedente.ricavo_eur * 100) : 0;
+    deltaText = `${delta >= 0 ? '↑' : '↓'} ${fmt(Math.abs(delta), 0)} € (${fmt(Math.abs(deltaPct), 1)}%) vs mese prec.`;
+    deltaClass = delta >= 0 ? 'accent-green' : 'accent-amber';
+  }
+  document.getElementById('bilancio-kpi').innerHTML = `
+    <div class="kpi-card accent-blue">
+      <div><span class="kpi-value">${fmt(totMwh, 1)}</span><span class="kpi-unit">MWh</span></div>
+      <div class="kpi-label">☀ Produzione totale</div>
+      <div class="kpi-sub">${rows.length} mesi registrati</div>
+    </div>
+    <div class="kpi-card accent-green">
+      <div><span class="kpi-value">${fmt(totEur, 0)}</span><span class="kpi-unit">€</span></div>
+      <div class="kpi-label">💶 Ricavo totale</div>
+      <div class="kpi-sub">cumulato storico</div>
+    </div>
+    <div class="kpi-card ${deltaClass}">
+      <div><span class="kpi-value">${ultimo ? fmt(parseFloat(ultimo.ricavo_eur), 0) : '—'}</span><span class="kpi-unit">€</span></div>
+      <div class="kpi-label">📈 Ultimo mese</div>
+      <div class="kpi-sub">${deltaText}</div>
+    </div>`;
+}
+
+function renderBilancioMesiChart(rows) {
+  const sorted = [...rows].reverse();
+  const labels = sorted.map(r => new Date(r.mese).toLocaleDateString('it-IT', { month: 'short', year: '2-digit' }));
+  const dataEur = sorted.map(r => parseFloat(r.ricavo_eur) || 0);
+  const dataMwh = sorted.map(r => parseFloat(r.produzione_mwh) || 0);
+
+  if (bilancioChartInstance) bilancioChartInstance.destroy();
+  const ctx = document.getElementById('bilancioChart').getContext('2d');
+  bilancioChartInstance = new Chart(ctx, {
+    data: {
+      labels,
+      datasets: [
+        { type: 'bar', label: 'Ricavo (€)', data: dataEur,
+          backgroundColor: 'rgba(18, 184, 134, 0.8)', borderRadius: 4, yAxisID: 'y', order: 2 },
+        { type: 'line', label: 'Produzione (MWh)', data: dataMwh,
+          borderColor: '#3b5bdb', backgroundColor: 'rgba(59, 91, 219, 0.08)',
+          borderWidth: 2.5, tension: 0.3, pointRadius: 4,
+          pointBackgroundColor: '#3b5bdb', pointBorderColor: '#fff',
+          pointBorderWidth: 1.5, yAxisID: 'y1', order: 1, fill: false }
+      ]
+    },
+    options: bilancioChartOptions('€', 'MWh', (c) => {
+      const v = c.parsed.y;
+      return c.dataset.label.includes('Ricavo') ? ` ${fmt(v, 0)} €` : ` ${fmt(v, 2)} MWh`;
+    })
+  });
+
+  const peakMese = [...rows].sort((a, b) => b.ricavo_eur - a.ricavo_eur)[0];
+  document.getElementById('bilancio-legend').textContent = peakMese
+    ? `Miglior mese: ${new Date(peakMese.mese).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })} (${fmt(peakMese.ricavo_eur, 0)} €)`
+    : '—';
+}
+
+function renderBilancioMesiTable(rows) {
+  const html = `
+    <div class="details-table">
+      <table>
+        <thead>
+          <tr><th>Mese</th><th class="num">Giorni</th><th class="num">Produzione</th><th class="num">Prezzo medio pesato</th><th class="num">Ricavo</th></tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr>
+              <td style="text-transform:capitalize">${new Date(r.mese).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })}</td>
+              <td class="num">${r.n_giorni}</td>
+              <td class="num">${fmt(parseFloat(r.produzione_mwh) || 0, 1)} MWh</td>
+              <td class="num">${fmt(parseFloat(r.prezzo_medio_pesato_eur_mwh) || 0, 1)} €/MWh</td>
+              <td class="num eur">${fmt(parseFloat(r.ricavo_eur) || 0, 0)} €</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  const box = document.getElementById('bilancio-details');
+  box.innerHTML = html;
+  box.style.display = 'block';
+}
+
+// ── OPZIONI CHART CONDIVISE ───────────────────────────────────
+// yLeftColor/yRightColor: DEVONO corrispondere ai colori dei dataset che
+// usano quell'asse (fix bug: asse kWh verde con barre blu e viceversa).
+function bilancioChartOptions(yLeftLabel, yRightLabel, labelCallback, yLeftColor = '#12b886', yRightColor = '#3b5bdb') {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true, position: 'bottom',
+        labels: { font: { family: 'Barlow', size: 11 }, padding: 12, boxWidth: 14, boxHeight: 10 }
+      },
+      tooltip: {
+        backgroundColor: '#1a2035', titleColor: '#fff', bodyColor: '#fff',
+        padding: 10, borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1,
+        callbacks: { label: labelCallback }
+      }
+    },
+    scales: {
+      x: { grid: { display: false },
+        ticks: { color: '#adb5bd', font: { family: 'DM Mono', size: 10 }, maxTicksLimit: 12, autoSkip: true } },
+      y: { position: 'left', beginAtZero: true,
+        grid: { color: 'rgba(15,31,53,0.04)' },
+        ticks: { color: yLeftColor, font: { family: 'DM Mono', size: 10 }, callback: (v) => fmt(v, 0) },
+        title: { display: true, text: yLeftLabel, color: yLeftColor, font: { family: 'DM Mono', size: 10, weight: '600' } } },
+      y1: { position: 'right', beginAtZero: true,
+        grid: { display: false },
+        ticks: { color: yRightColor, font: { family: 'DM Mono', size: 10 }, callback: (v) => fmt(v, 0) },
+        title: { display: true, text: yRightLabel, color: yRightColor, font: { family: 'DM Mono', size: 10, weight: '600' } } }
+    },
+    interaction: { mode: 'index', intersect: false }
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FATTURE ENGIE — archivio, grafico comparativo, analisi (novità #6)
+// ═══════════════════════════════════════════════════════════════
+let fattureChartInstance = null;
+let fattureCache = [];
+let fatturaSelIdx = 0;          // indice della fattura mostrata nella card (0 = ultima)
+const fasceVisibili = { f1: true, f2: true, f3: true };   // filtro fasce sul grafico consumi
+
+function renderFatture(rows) {
+  fattureCache = rows;
+  if (fatturaSelIdx >= rows.length) fatturaSelIdx = 0;
+  renderFattureChart(rows);
+  renderFatturaCard(rows, fatturaSelIdx);
+  renderAnalisiFatture(rows);
+  renderConsumi();
+}
+
+// Click su una barra del grafico → la card sotto mostra QUELLA fattura
+function selectFattura(idx) {
+  if (idx < 0 || idx >= fattureCache.length) return;
+  fatturaSelIdx = idx;
+  renderFattureChart(fattureCache);
+  renderFatturaCard(fattureCache, idx);
+  renderConsumi();
+  document.getElementById('bill-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function renderFattureChart(rows) {
+  const last12 = rows.slice(0, 12).reverse();
+  const labels = last12.map(r => new Date(r.mese).toLocaleDateString('it-IT', { month: 'short', year: '2-digit' }));
+  const dataTot = last12.map(r => r.totale_fattura || 0);
+  const dataPrezzo = last12.map(r => (r.prezzo_medio_kwh || 0) * 100); // in c€/kWh per leggibilità
+
+  if (fattureChartInstance) fattureChartInstance.destroy();
+  const ctx = document.getElementById('fattureChart').getContext('2d');
+
+  const opts = bilancioChartOptions('€', 'c€/kWh', (c) => {
+    const v = c.parsed.y;
+    return c.dataset.label.includes('Totale') ? ` ${fmtEur(v)} · clicca per aprire` : ` ${fmt(v, 2)} c€/kWh`;
+  }, '#f59f00', '#e03131');   // sinistra = totale (barre AMBRA), destra = prezzo (linea ROSSA)
+
+  // indice nel grafico → indice nella cache
+  const cacheIdxOf = (i) => rows.indexOf(last12[i]);
+  opts.onClick = (evt, elements) => {
+    if (!elements.length) return;
+    selectFattura(cacheIdxOf(elements[0].index));
+  };
+  opts.onHover = (evt, elements) => {
+    evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+  };
+
+  // barre: caricate manualmente in blu, demo in ambra; la SELEZIONATA ha bordo navy
+  const colors = last12.map(r => r.origine === 'utente' ? 'rgba(59, 91, 219, 0.85)' : 'rgba(245, 159, 0, 0.75)');
+  const borders = last12.map((r, i) => cacheIdxOf(i) === fatturaSelIdx ? '#0F1F35' : 'transparent');
+
+  fattureChartInstance = new Chart(ctx, {
+    data: {
+      labels,
+      datasets: [
+        { type: 'bar', label: 'Totale fattura (€)', data: dataTot,
+          backgroundColor: colors, borderColor: borders, borderWidth: 2.5,
+          borderRadius: 4, yAxisID: 'y', order: 2 },
+        { type: 'line', label: 'Prezzo medio (c€/kWh)', data: dataPrezzo,
+          borderColor: '#e03131', backgroundColor: 'rgba(224, 49, 49, 0.06)',
+          borderWidth: 2.5, tension: 0.3, pointRadius: 3,
+          pointBackgroundColor: '#e03131', pointBorderColor: '#fff',
+          pointBorderWidth: 1.5, yAxisID: 'y1', order: 1, fill: false }
+      ]
+    },
+    options: opts
+  });
+
+  const nUtente = rows.filter(r => r.origine === 'utente').length;
+  document.getElementById('fatture-legend').textContent = nUtente > 0
+    ? `${rows.length} fatture in archivio · ${nUtente} caricate da PDF (barre blu) · clicca una barra`
+    : `${rows.length} fatture in archivio · clicca una barra per aprirla`;
+}
+
+function renderFatturaCard(rows, idx) {
+  const box = document.getElementById('bill-card');
+  if (!rows.length) {
+    box.innerHTML = '<div class="state-msg" style="color:rgba(255,255,255,0.6)">Nessuna fattura registrata</div>';
+    return;
+  }
+  const b = rows[idx];
+  const prec = rows[idx + 1] || null;   // delta rispetto alla fattura precedente a QUELLA selezionata
+  const consumo = b.kwh_totali || 0;
+  const totale = b.totale_fattura || 0;
+  const prezzoMedio = b.prezzo_medio_kwh || 0;
+  const prezzoMarginale = b.prezzo_marginale_kwh || 0;
+  const pun = b.pun_medio_eur_mwh || 0;
+
+  const f1 = b.kwh_f1 || 0, f2 = b.kwh_f2 || 0, f3 = b.kwh_f3 || 0;
+  const totFasce = f1 + f2 + f3;
+  const pctF1 = totFasce > 0 ? (f1 / totFasce * 100) : 0;
+  const pctF2 = totFasce > 0 ? (f2 / totFasce * 100) : 0;
+  const pctF3 = totFasce > 0 ? (f3 / totFasce * 100) : 0;
+
+  const periodo = new Date(b.mese).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+  const isUltima = idx === 0;
+
+  // delta vs fattura precedente
+  let deltaTotHtml = '', deltaPrezzoHtml = '';
+  if (prec) {
+    const dTot = prec.totale_fattura > 0 ? ((totale - prec.totale_fattura) / prec.totale_fattura * 100) : null;
+    const dPrezzo = prec.prezzo_medio_kwh > 0 ? ((prezzoMedio - prec.prezzo_medio_kwh) / prec.prezzo_medio_kwh * 100) : null;
+    if (dTot !== null) {
+      const up = dTot >= 0;
+      deltaTotHtml = `<span class="bill-delta ${up ? 'up' : 'down'}">${up ? '↑' : '↓'} ${fmt(Math.abs(dTot), 1)}% vs mese prec.</span>`;
+    }
+    if (dPrezzo !== null) {
+      const up = dPrezzo >= 0;
+      deltaPrezzoHtml = `<span class="bill-delta ${up ? 'up' : 'down'}">${up ? '↑' : '↓'} ${fmt(Math.abs(dPrezzo), 1)}%</span>`;
+    }
+  }
+
+  box.innerHTML = `
+    <div class="bill-row">
+      <div>
+        <div class="bill-label">${isUltima ? 'Ultima fattura — Periodo' : 'Fattura selezionata — Periodo'}</div>
+        <div class="bill-sub">POD ${b.pod || '—'} · Fatt. ${b.numero_fattura || '—'}${b.origine === 'utente' ? ' · 📄 da PDF' : ''}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="bill-value" style="text-transform:capitalize">${periodo}</div>
+        ${!isUltima ? '<button class="bill-nav" onclick="selectFattura(0)">↩ torna all\u2019ultima</button>' : ''}
+      </div>
+    </div>
+    <div class="bill-row">
+      <div class="bill-label">Consumo totale</div>
+      <div class="bill-value big">${fmt(consumo / 1000, 1)} <span style="font-size:14px;opacity:0.6">MWh</span></div>
+    </div>
+    <div class="bill-row">
+      <div>
+        <div class="bill-label">Prezzo medio kWh</div>
+        <div class="bill-sub">${deltaPrezzoHtml}</div>
+      </div>
+      <div class="bill-value">${prezzoMedio.toFixed(3).replace('.', ',')} <span style="font-size:12px;opacity:0.6">€/kWh</span></div>
+    </div>
+    <div class="bill-row">
+      <div>
+        <div class="bill-label">Prezzo marginale autoconsumo</div>
+        <div class="bill-sub">Per valorizzare energia FV auto-consumata</div>
+      </div>
+      <div class="bill-value">${prezzoMarginale.toFixed(3).replace('.', ',')} <span style="font-size:12px;opacity:0.6">€/kWh</span></div>
+    </div>
+    <div class="bill-row">
+      <div class="bill-label">PUN medio del mese</div>
+      <div class="bill-value">${fmt(pun, 2)} <span style="font-size:12px;opacity:0.6">€/MWh</span></div>
+    </div>
+    <div class="bill-row" style="display:block">
+      <div class="bill-label" style="margin-bottom:10px">Consumo per fasce orarie <span style="opacity:0.5;font-size:11px">— clicca una fascia per filtrare il grafico consumi</span></div>
+      <div style="display:flex;gap:6px;height:26px;border-radius:6px;overflow:hidden;margin-bottom:8px">
+        <div class="fascia-seg ${fasceVisibili.f1 ? '' : 'off'}" onclick="toggleFascia('f1')" style="flex:${pctF1};background:#f59f00;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600" title="F1: ${fmt(f1, 0)} kWh">F1</div>
+        <div class="fascia-seg ${fasceVisibili.f2 ? '' : 'off'}" onclick="toggleFascia('f2')" style="flex:${pctF2};background:#4dabf7;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600" title="F2: ${fmt(f2, 0)} kWh">F2</div>
+        <div class="fascia-seg ${fasceVisibili.f3 ? '' : 'off'}" onclick="toggleFascia('f3')" style="flex:${pctF3};background:#495057;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600" title="F3: ${fmt(f3, 0)} kWh">F3</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;opacity:0.7;font-family:'DM Mono',monospace">
+        <span>F1 ${fmt(pctF1, 0)}%</span><span>F2 ${fmt(pctF2, 0)}%</span><span>F3 ${fmt(pctF3, 0)}%</span>
+      </div>
+    </div>
+    <div class="bill-row">
+      <div>
+        <div class="bill-label">Totale fattura</div>
+        <div class="bill-sub">IVA inclusa · ${deltaTotHtml}</div>
+      </div>
+      <div class="bill-value big">${fmtEur(totale)}</div>
+    </div>`;
+}
+
+// Filtro fasce condiviso: card fattura ↔ grafico consumi
+function toggleFascia(f) {
+  fasceVisibili[f] = !fasceVisibili[f];
+  renderFatturaCard(fattureCache, fatturaSelIdx);
+  renderConsumi();
+}
+
+// Analisi automatica delle fatture in archivio
+function renderAnalisiFatture(rows) {
+  const box = document.getElementById('analysis-card');
+  if (rows.length < 3) {
+    box.innerHTML = '<div class="analysis-title">🔎 Analisi automatica</div><div class="muted" style="font-size:13px">Servono almeno 3 fatture per l\'analisi.</div>';
+    return;
+  }
+  const items = [];
+  const last12 = rows.slice(0, 12);
+
+  // 1) Trend €/kWh: media ultimi 3 mesi vs 3 precedenti
+  const p3 = last12.slice(0, 3).map(r => r.prezzo_medio_kwh).filter(Boolean);
+  const p3prev = last12.slice(3, 6).map(r => r.prezzo_medio_kwh).filter(Boolean);
+  if (p3.length === 3 && p3prev.length === 3) {
+    const m1 = p3.reduce((a, b) => a + b) / 3;
+    const m0 = p3prev.reduce((a, b) => a + b) / 3;
+    const d = (m1 - m0) / m0 * 100;
+    if (Math.abs(d) >= 2) {
+      items.push({
+        ico: d > 0 ? '📈' : '📉',
+        txt: `Il prezzo medio è ${d > 0 ? '<strong>in salita</strong>' : '<strong>in discesa</strong>'}: media ultimi 3 mesi <strong>${(m1).toFixed(3).replace('.', ',')} €/kWh</strong> contro ${(m0).toFixed(3).replace('.', ',')} del trimestre precedente (${d > 0 ? '+' : ''}${fmt(d, 1)}%).${d > 5 ? ' Vale la pena rinegoziare le condizioni con ENGIE.' : ''}`
+      });
+    } else {
+      items.push({ ico: '➡️', txt: `Prezzo medio <strong>stabile</strong> negli ultimi 6 mesi (~${m1.toFixed(3).replace('.', ',')} €/kWh).` });
+    }
+  }
+
+  // 2) Anomalie: fatture con €/kWh fuori ±12% dalla media dei 12 mesi
+  const prezzi = last12.map(r => r.prezzo_medio_kwh).filter(Boolean);
+  const media = prezzi.reduce((a, b) => a + b, 0) / prezzi.length;
+  const anomale = last12.filter(r => r.prezzo_medio_kwh && Math.abs(r.prezzo_medio_kwh - media) / media > 0.12);
+  if (anomale.length) {
+    const elenco = anomale.map(r => {
+      const m = new Date(r.mese).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+      const scost = (r.prezzo_medio_kwh - media) / media * 100;
+      return `<strong style="text-transform:capitalize">${m}</strong> (${scost > 0 ? '+' : ''}${fmt(scost, 0)}%)`;
+    }).join(', ');
+    items.push({ ico: '⚠️', txt: `Fatture con prezzo anomalo rispetto alla media di ${media.toFixed(3).replace('.', ',')} €/kWh: ${elenco}. Da verificare voci e conguagli, come fatto per Seclan/Xerox.` });
+  } else {
+    items.push({ ico: '✅', txt: `Nessuna anomalia di prezzo: tutte le fatture rientrano nel ±12% dalla media annuale (${media.toFixed(3).replace('.', ',')} €/kWh).` });
+  }
+
+  // 3) Mese più caro / più conveniente
+  const conPrezzo = last12.filter(r => r.prezzo_medio_kwh);
+  if (conPrezzo.length >= 2) {
+    const max = [...conPrezzo].sort((a, b) => b.prezzo_medio_kwh - a.prezzo_medio_kwh)[0];
+    const min = [...conPrezzo].sort((a, b) => a.prezzo_medio_kwh - b.prezzo_medio_kwh)[0];
+    const fm = (r) => new Date(r.mese).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+    items.push({
+      ico: '🔎',
+      txt: `Mese più caro: <strong style="text-transform:capitalize">${fm(max)}</strong> (${max.prezzo_medio_kwh.toFixed(3).replace('.', ',')} €/kWh) · più conveniente: <strong style="text-transform:capitalize">${fm(min)}</strong> (${min.prezzo_medio_kwh.toFixed(3).replace('.', ',')} €/kWh). Spread ${fmt((max.prezzo_medio_kwh - min.prezzo_medio_kwh) * 1000, 0)} €/MWh.`
+    });
+  }
+
+  // 4) Spesa totale 12 mesi + consumo
+  const totSpesa = last12.reduce((s, r) => s + (r.totale_fattura || 0), 0);
+  const totKwh = last12.reduce((s, r) => s + (r.kwh_totali || 0), 0);
+  items.push({
+    ico: '💶',
+    txt: `Negli ultimi ${last12.length} mesi: spesa complessiva <strong>${fmtEur(totSpesa)}</strong> per <strong>${fmt(totKwh / 1000, 0)} MWh</strong> (${(totSpesa / totKwh).toFixed(3).replace('.', ',')} €/kWh medio effettivo).`
+  });
+
+  // 5) Confronto con PUN (margine fornitore)
+  const conPun = last12.filter(r => r.pun_medio_eur_mwh && r.prezzo_medio_kwh);
+  if (conPun.length >= 3) {
+    const spreadMedio = conPun.reduce((s, r) => s + (r.prezzo_medio_kwh * 1000 - r.pun_medio_eur_mwh), 0) / conPun.length;
+    items.push({
+      ico: '⚖️',
+      txt: `Spread medio prezzo fatturato vs PUN: <strong>${fmt(spreadMedio, 0)} €/MWh</strong>. È la componente fornitore+oneri: se cresce nel tempo senza motivo, è materiale per la trattativa.`
+    });
+  }
+
+  box.innerHTML = `
+    <div class="analysis-title">🔎 Analisi automatica archivio fatture</div>
+    ${items.map(i => `<div class="analysis-item"><span class="a-ico">${i.ico}</span><span>${i.txt}</span></div>`).join('')}`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DRAG & DROP FATTURE PDF + PARSER
+// ═══════════════════════════════════════════════════════════════
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+}
+
+const dz = document.getElementById('dropzone');
+const fileInput = document.getElementById('file-input');
+
+dz.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', () => {
+  if (fileInput.files.length) handlePdfFile(fileInput.files[0]);
+  fileInput.value = '';
+});
+['dragenter', 'dragover'].forEach(ev =>
+  dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add('dragover'); }));
+['dragleave', 'drop'].forEach(ev =>
+  dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove('dragover'); }));
+dz.addEventListener('drop', (e) => {
+  const f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (!f) return;
+  if (f.type !== 'application/pdf') {
+    dzStatus('Il file non è un PDF. Trascina la fattura ENGIE in formato PDF.', 'err');
+    return;
+  }
+  handlePdfFile(f);
+});
+
+function dzStatus(text, cls) {
+  const el = document.getElementById('dz-status');
+  el.className = 'dz-status ' + cls;
+  el.textContent = text;
+  if (cls === 'ok') setTimeout(() => { el.className = 'dz-status'; }, 5000);
+}
+
+async function handlePdfFile(file) {
+  dzStatus(`⏳ Lettura di "${file.name}"…`, 'info');
+  try {
+    const buf = await file.arrayBuffer();
+
+    // Anti-doppione: stesso contenuto già in archivio → stop
+    pendingFatturaHash = await sha256File(buf.slice(0));
+    const dup = await docFindByHash(pendingFatturaHash);
+    if (dup) {
+      pendingFatturaFile = null;
+      dzStatus('⚠️ ' + docDupMsg(dup) + ' Caricamento annullato.', 'err');
+      return;
+    }
+    pendingFatturaFile = file;   // verrà archiviato alla conferma nel modal
+
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    let text = '';
+    const nPages = Math.min(pdf.numPages, 6); // le info chiave sono nelle prime pagine
+    for (let i = 1; i <= nPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map(it => it.str).join(' ') + '\n';
+    }
+    lastPdfText = text;   // per la calibrazione del parser (link "copia testo")
+
+    // PDF scansionato/senza livello testo: le regex non possono funzionare
+    if (text.replace(/\s/g, '').length < 200) {
+      dzStatus('⚠️ Il PDF non contiene testo estraibile (probabile scansione). Inserisci i dati a mano.', 'err');
+      openFatturaModal(parseEngiePdf('', file.name), 'PDF senza livello testo: compila i campi manualmente (mese e POD provati dal nome file).');
+      return;
+    }
+
+    const parsed = parseEngiePdf(text, file.name);
+    const nTrovati = Object.values(parsed).filter(v => v !== null && v !== '').length;
+    dzStatus(`✓ PDF letto: ${nTrovati} campi riconosciuti. Verifica e conferma.`, 'ok');
+    openFatturaModal(parsed, `Estratti ${nTrovati} campi da "${file.name}". I campi evidenziati in verde sono stati riconosciuti automaticamente.`);
+  } catch (err) {
+    console.error(err);
+    dzStatus('Errore nella lettura del PDF: ' + err.message + '. Puoi inserire i dati a mano.', 'err');
+    openFatturaModal({}, 'Lettura automatica non riuscita: inserisci i dati manualmente.');
+  }
+}
+
+// Parser testo fattura ENGIE — batteria di pattern tolleranti sui layout.
+// Fallback: nome file (es. invoice-...-IT001E00203805-2026-06.pdf) per mese e POD;
+// se manca il totale kWh ma ci sono le fasce, kwh = F1+F2+F3.
+function parseEngiePdf(text, filename = '') {
+  const t = text.replace(/\s+/g, ' ');
+
+  const numIt = (s) => {
+    if (!s) return null;
+    const n = parseFloat(String(s).replace(/\./g, '').replace(',', '.'));
+    return isNaN(n) ? null : n;
+  };
+  const grab = (regexes) => {
+    for (const re of regexes) {
+      const m = t.match(re);
+      if (m) return m[1];
+    }
+    return null;
+  };
+
+  // ── Mese di riferimento ──
+  const mesiIt = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+  let mese = null;
+  let m = t.toLowerCase().match(new RegExp('(' + mesiIt.join('|') + ')\\s+(20\\d{2})'));
+  if (m) {
+    mese = `${m[2]}-${String(mesiIt.indexOf(m[1]) + 1).padStart(2, '0')}`;
+  } else {
+    m = t.match(/(?:competenza|periodo|riferimento)[^\d]{0,25}(\d{2})[\/\-](20\d{2})/i);
+    if (m) mese = `${m[2]}-${m[1]}`;
+  }
+  if (!mese) {
+    // dal periodo "dal 01/06/2026 al 30/06/2026"
+    m = t.match(/dal\s+\d{1,2}\/(\d{2})\/(20\d{2})\s+al/i);
+    if (m) mese = `${m[2]}-${m[1]}`;
+  }
+  if (!mese && filename) {
+    // fallback: dal nome file (es. ...-2026-06.pdf oppure ...-06-2026...)
+    m = filename.match(/(20\d{2})[-_](\d{2})/);
+    if (m && parseInt(m[2]) >= 1 && parseInt(m[2]) <= 12) mese = `${m[1]}-${m[2]}`;
+  }
+
+  // ── Numero fattura ──
+  const numero = grab([
+    /fattura\s+(?:elettronica\s+)?(?:n\.?|numero|nr\.?)\s*[:\s]?\s*([A-Z0-9\/\-]{5,20})/i,
+    /n\.\s*fattura\s*[:\s]?\s*([A-Z0-9\/\-]{5,20})/i,
+    /(?:documento|doc\.)\s*(?:n\.?|numero)\s*[:\s]?\s*([A-Z0-9\/\-]{5,20})/i
+  ]);
+
+  // ── Totale fattura ──
+  const totale = numIt(grab([
+    /totale\s+(?:fattura|bolletta|documento|da\s+pagare)\s*[:\s]?\s*€?\s*([\d\.]+,\d{2})/i,
+    /importo\s+(?:totale|da\s+pagare|dovuto)\s*[:\s]?\s*€?\s*([\d\.]+,\d{2})/i,
+    /totale\s*\(?\s*€\s*\)?\s*[:\s]?\s*([\d\.]+,\d{2})/i,
+    /€\s*([\d\.]+,\d{2})\s*(?:entro|da\s+pagare)/i,
+    /(?:pagare|dovuto)[^\d€]{0,20}€?\s*([\d\.]+,\d{2})/i
+  ]));
+
+  // ── Consumo totale kWh ──
+  let kwhTot = numIt(grab([
+    /(?:consumo|energia)\s+(?:attiva\s+)?(?:totale|fatturat[ao]|complessiv[ao])\s*[:\s]?\s*([\d\.]+(?:,\d+)?)\s*kwh/i,
+    /totale\s+(?:energia|kwh|consumi)\s*[:\s]?\s*([\d\.]+(?:,\d+)?)/i,
+    /kwh\s+(?:totali|fatturati|consumati)\s*[:\s]?\s*([\d\.]+(?:,\d+)?)/i,
+    /([\d\.]{4,}(?:,\d+)?)\s*kwh\s+(?:totali|fatturati|consumati)/i,
+    /energia\s+attiva[^\d]{0,40}([\d\.]{4,}(?:,\d+)?)\s*kwh/i
+  ]));
+
+  // ── Fasce F1/F2/F3 ──
+  const grabFascia = (n) => numIt(grab([
+    new RegExp(`f\\s*${n}\\s*[:\\s]?\\s*([\\d\\.]+(?:,\\d+)?)\\s*kwh`, 'i'),
+    new RegExp(`(?:energia\\s+attiva\\s+|ea\\s+)f\\s*${n}[^\\d]{0,15}([\\d\\.]+(?:,\\d+)?)`, 'i'),
+    new RegExp(`fascia\\s*f?\\s*${n}[^\\d]{0,15}([\\d\\.]+(?:,\\d+)?)`, 'i'),
+    new RegExp(`kwh\\s+f\\s*${n}\\s*[:\\s]?\\s*([\\d\\.]+(?:,\\d+)?)`, 'i')
+  ]));
+  const f1 = grabFascia(1);
+  const f2 = grabFascia(2);
+  const f3 = grabFascia(3);
+
+  // fallback: totale kWh dalla somma delle fasce
+  if (kwhTot === null && f1 !== null && f2 !== null && f3 !== null) {
+    kwhTot = Math.round(f1 + f2 + f3);
+  }
+
+  // ── PUN e POD ──
+  const pun = numIt(grab([
+    /pun\s*(?:medio|mensile)?\s*[:\s]?\s*([\d\.]+,\d+)/i,
+    /prezzo\s+unico\s+nazionale[^\d]{0,20}([\d\.]+,\d+)/i
+  ]));
+  let pod = grab([/pod\s*[:\s]?\s*(IT\d{3}E\d{7,10})/i, /(IT\d{3}E\d{7,10})/]);
+  if (!pod && filename) {
+    m = filename.match(/(IT\d{3}E\d{7,10})/i);
+    if (m) pod = m[1].toUpperCase();
+  }
+
+  return {
+    mese, numero_fattura: numero, totale_fattura: totale,
+    kwh_totali: kwhTot, kwh_f1: f1, kwh_f2: f2, kwh_f3: f3,
+    pun_medio_eur_mwh: pun, pod
+  };
+}
+
+// ── MODAL conferma/correzione ─────────────────────────────────
+function openFatturaModal(parsed, subText) {
+  document.getElementById('fattura-modal-sub').textContent = subText || 'Controlla i campi e correggi se necessario.';
+  const setField = (id, val) => {
+    const el = document.getElementById(id);
+    el.value = (val === null || val === undefined) ? '' : val;
+    el.classList.toggle('parsed-ok', val !== null && val !== undefined && val !== '');
+  };
+  setField('mf-mese', parsed.mese);
+  setField('mf-numero', parsed.numero_fattura);
+  setField('mf-totale', parsed.totale_fattura);
+  setField('mf-kwh', parsed.kwh_totali);
+  setField('mf-f1', parsed.kwh_f1);
+  setField('mf-f2', parsed.kwh_f2);
+  setField('mf-f3', parsed.kwh_f3);
+  setField('mf-pun', parsed.pun_medio_eur_mwh);
+  setField('mf-pod', parsed.pod);
+  // link calibrazione: visibile solo se abbiamo testo estratto da un PDF
+  const copyLink = document.getElementById('copy-pdf-text');
+  copyLink.style.display = (lastPdfText && lastPdfText.trim().length > 0) ? 'inline-block' : 'none';
+  document.getElementById('fattura-modal').classList.add('open');
+}
+
+// Copia il testo grezzo del PDF: incollandolo in chat si calibra il parser sul layout reale
+document.getElementById('copy-pdf-text').addEventListener('click', async () => {
+  if (!lastPdfText) return;
+  try {
+    await navigator.clipboard.writeText(lastPdfText);
+    document.getElementById('copy-pdf-text').textContent = '✓ Testo copiato negli appunti — incollalo in chat per la calibrazione';
+  } catch (e) {
+    // fallback: mostro il testo in una finestra
+    const w = window.open('', '_blank');
+    w.document.write('<pre style="white-space:pre-wrap;font-family:monospace;font-size:12px">' +
+      lastPdfText.replace(/</g, '&lt;') + '</pre>');
+  }
+});
+function closeFatturaModal() {
+  pendingFatturaFile = null;
+  pendingFatturaHash = null;
+  document.getElementById('fattura-modal').classList.remove('open');
+}
+document.getElementById('fattura-modal').addEventListener('click', (e) => {
+  if (e.target.id === 'fattura-modal') closeFatturaModal();
+});
+
+async function salvaFattura() {
+  const meseVal = document.getElementById('mf-mese').value;      // YYYY-MM
+  const totale = parseFloat(document.getElementById('mf-totale').value);
+  const kwh = parseFloat(document.getElementById('mf-kwh').value);
+  if (!meseVal || isNaN(totale) || isNaN(kwh) || kwh <= 0) {
+    alert('Servono almeno: mese, totale fattura e consumo kWh.');
+    return;
+  }
+  const f1 = parseFloat(document.getElementById('mf-f1').value) || 0;
+  const f2 = parseFloat(document.getElementById('mf-f2').value) || 0;
+  const f3 = parseFloat(document.getElementById('mf-f3').value) || 0;
+  const pun = parseFloat(document.getElementById('mf-pun').value) || null;
+
+  const record = {
+    mese: meseVal + '-01',
+    numero_fattura: document.getElementById('mf-numero').value || null,
+    pod: document.getElementById('mf-pod').value || null,
+    kwh_totali: kwh,
+    kwh_f1: f1, kwh_f2: f2, kwh_f3: f3,
+    totale_fattura: totale,
+    prezzo_medio_kwh: Math.round(totale / kwh * 1000) / 1000,
+    prezzo_marginale_kwh: Math.round(totale / kwh * 0.82 * 1000) / 1000,
+    pun_medio_eur_mwh: pun
+  };
+
+  // Anti-doppione per mese: fattura già presente → conferma sostituzione
+  const meseLbl = new Date(record.mese).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+  const docEsistente = await docFindByTipoMese('fattura', meseVal);
+  const recordEsistente = fattureCache.find(f => String(f.mese).slice(0, 7) === meseVal);
+  if (docEsistente || recordEsistente) {
+    const da = docEsistente ? ` (documento "${docEsistente.nome}")` : '';
+    if (!confirm(`Esiste già una fattura per ${meseLbl}${da}. Sostituirla con questa?`)) return;
+    if (docEsistente) await docDeleteRecord(docEsistente);
+  }
+
+  // Scrittura su Supabase: sostituzione del mese (DELETE + INSERT)
+  try {
+    await supaWrite(`engie_fatture?mese=eq.${record.mese}`, 'DELETE');
+    await supaWrite('engie_fatture', 'POST', [record]);
+  } catch (err) {
+    alert('Salvataggio fattura su Supabase non riuscito: ' + err.message);
+    return;
+  }
+
+  // il PDF originale resta nell'archivio documenti
+  if (pendingFatturaFile) {
+    await archiviaDocumento(pendingFatturaFile, 'fattura', meseVal, pendingFatturaHash);
+  }
+
+  closeFatturaModal();
+  dzStatus(`✓ Fattura ${new Date(record.mese).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })} salvata in archivio.`, 'ok');
+  renderFatture(await fetchFatture());
+  document.getElementById('sec-fatture').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DETTAGLIO CONSUMI ENGIE — caricamento, parsing, grafico per fasce
+// Il dettaglio è agganciato al MESE della fattura selezionata.
+// ═══════════════════════════════════════════════════════════════
+let consumiChartInstance = null;
+let pendingConsumi = null;   // righe in attesa di conferma nel modal
+
+// Dettaglio consumi su Supabase: tabella `engie_consumi_giorno`
+// (data PK, kwh_f1, kwh_f2, kwh_f3) — vedi setup-supabase.sql
+const consumiCache = {};   // 'YYYY-MM' → [{data,f1,f2,f3}] (anche [] se assente)
+async function fetchConsumiMese(mese) {
+  if (consumiCache[mese] !== undefined) return consumiCache[mese];
+  try {
+    const p = mese.split('-');
+    const last = new Date(parseInt(p[0]), parseInt(p[1]), 0).getDate();
+    const rows = await supaGet(
+      `engie_consumi_giorno?data=gte.${mese}-01&data=lte.${mese}-${String(last).padStart(2, '0')}&order=data.asc`
+    );
+    consumiCache[mese] = (rows || []).map(r => ({
+      data: r.data,
+      f1: parseFloat(r.kwh_f1) || 0,
+      f2: parseFloat(r.kwh_f2) || 0,
+      f3: parseFloat(r.kwh_f3) || 0
+    }));
+  } catch (err) {
+    console.warn('engie_consumi_giorno non disponibile', err);
+    consumiCache[mese] = [];
+  }
+  return consumiCache[mese];
+}
+
+// Calendario fasce ARERA (delibera 181/06):
+// F1 lun–ven 8–19 · F2 lun–ven 7–8 e 19–23 + sab 7–23 · F3 resto, domeniche e festivi
+const FESTIVI_MMDD = ['01-01', '01-06', '04-25', '05-01', '06-02', '08-15', '11-01', '12-08', '12-25', '12-26'];
+function fasciaOraria(dateObj, ora) {
+  const mmdd = String(dateObj.getMonth() + 1).padStart(2, '0') + '-' + String(dateObj.getDate()).padStart(2, '0');
+  const dow = dateObj.getDay();                    // 0=domenica … 6=sabato
+  if (dow === 0 || FESTIVI_MMDD.includes(mmdd)) return 'f3';
+  if (dow === 6) return (ora >= 7 && ora < 23) ? 'f2' : 'f3';
+  if (ora >= 8 && ora < 19) return 'f1';
+  if ((ora >= 7 && ora < 8) || (ora >= 19 && ora < 23)) return 'f2';
+  return 'f3';
+}
+
+// Parsing numero italiano ("1.234,56") o anglosassone
+function numFlex(s) {
+  if (s === null || s === undefined) return null;
+  s = String(s).trim();
+  if (!s) return null;
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+// Data flessibile: dd/mm/yyyy · dd-mm-yyyy · yyyy-mm-dd
+function dataFlex(s) {
+  if (!s) return null;
+  s = String(s).trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (m) return `${m[3]}-${String(m[2]).padStart(2, '0')}-${String(m[1]).padStart(2, '0')}`;
+  return null;
+}
+
+// ── PARSER CSV ────────────────────────────────────────────────
+// Riconosce due formati:
+//  A) giornaliero: colonne data + f1/f2/f3 (o fascia1…)
+//  B) curva di carico: colonne data(+ora) + kwh unico → aggrego per fasce
+function parseConsumiCsv(text) {
+  const righe = text.split(/\r?\n/).filter(r => r.trim());
+  if (righe.length < 2) throw new Error('CSV vuoto o troppo corto');
+  const sep = (righe[0].match(/;/g) || []).length >= (righe[0].match(/,/g) || []).length ? ';' : ',';
+  const head = righe[0].toLowerCase().split(sep).map(h => h.trim().replace(/"/g, ''));
+
+  const colIdx = (patterns) => head.findIndex(h => patterns.some(p => h.includes(p)));
+  const iData = colIdx(['data', 'giorno', 'date']);
+  const iF1 = colIdx(['f1', 'fascia 1', 'fascia1']);
+  const iF2 = colIdx(['f2', 'fascia 2', 'fascia2']);
+  const iF3 = colIdx(['f3', 'fascia 3', 'fascia3']);
+  const iOra = colIdx(['ora', 'hour', 'quarto']);
+  const iKwh = colIdx(['kwh', 'consumo', 'energia', 'attiva']);
+
+  if (iData === -1) throw new Error('Colonna data non trovata nel CSV');
+
+  // Formato A: giornaliero per fasce
+  if (iF1 !== -1 && iF2 !== -1 && iF3 !== -1) {
+    const perGiorno = {};
+    for (let i = 1; i < righe.length; i++) {
+      const c = righe[i].split(sep).map(x => x.replace(/"/g, ''));
+      const d = dataFlex(c[iData]);
+      if (!d) continue;
+      if (!perGiorno[d]) perGiorno[d] = { data: d, f1: 0, f2: 0, f3: 0 };
+      perGiorno[d].f1 += numFlex(c[iF1]) || 0;
+      perGiorno[d].f2 += numFlex(c[iF2]) || 0;
+      perGiorno[d].f3 += numFlex(c[iF3]) || 0;
+    }
+    return Object.values(perGiorno).sort((a, b) => a.data.localeCompare(b.data));
+  }
+
+  // Formato B: curva di carico oraria/quartoraria → fasce ARERA
+  if (iKwh !== -1) {
+    const perGiorno = {};
+    for (let i = 1; i < righe.length; i++) {
+      const c = righe[i].split(sep).map(x => x.replace(/"/g, ''));
+      const d = dataFlex(c[iData]);
+      if (!d) continue;
+      let ora = 0;
+      if (iOra !== -1) {
+        const om = String(c[iOra]).match(/(\d{1,2})/);
+        ora = om ? parseInt(om[1]) : 0;
+      } else {
+        const om = String(c[iData]).match(/\s(\d{1,2}):/);
+        ora = om ? parseInt(om[1]) : 0;
+      }
+      const kwh = numFlex(c[iKwh]) || 0;
+      const p = d.split('-');
+      const f = fasciaOraria(new Date(parseInt(p[0]), parseInt(p[1]) - 1, parseInt(p[2])), ora);
+      if (!perGiorno[d]) perGiorno[d] = { data: d, f1: 0, f2: 0, f3: 0 };
+      perGiorno[d][f] += kwh;
+    }
+    return Object.values(perGiorno).sort((a, b) => a.data.localeCompare(b.data));
+  }
+
+  throw new Error('Formato CSV non riconosciuto: servono colonne F1/F2/F3 oppure una colonna kWh');
+}
+
+// ── PARSER PDF (testo) ────────────────────────────────────────
+// Cerca righe "dd/mm/yyyy  n1  n2  n3" (giorno, F1, F2, F3).
+// NB: da tarare sul layout reale del dettaglio ENGIE quando disponibile.
+function parseConsumiPdfText(text) {
+  const rows = [];
+  const re = /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const d = dataFlex(m[1]);
+    if (!d) continue;
+    rows.push({ data: d, f1: numFlex(m[2]) || 0, f2: numFlex(m[3]) || 0, f3: numFlex(m[4]) || 0 });
+  }
+  if (!rows.length) throw new Error('Nessuna riga giornaliera riconosciuta nel PDF');
+  return rows.sort((a, b) => a.data.localeCompare(b.data));
+}
+
+// ── PARSER XLSX — export portale ENGIE (curva quartoraria) ────
+// Formato reale (verificato su export ENGIE Oricola):
+//   Foglio "Off-take_AutomaticMetering", 5 righe di metadati
+//   (Site / Grid operator / Metering point / Data type / Unit=kW),
+//   poi righe: [timestamp ISO +02:00, kW Total Energy, kW active_power].
+// Ogni riga è la potenza media del quarto d'ora → kWh = kW × 0,25.
+function parseConsumiEngieXlsx(workbook) {
+  // preferisco il foglio Off-take; il foglio Injection in Italia è sempre vuoto
+  const sheetName = workbook.SheetNames.find(n => /off.?take/i.test(n)) || workbook.SheetNames[0];
+  const righe = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, raw: true });
+
+  let pod = null;
+  const perGiorno = {};
+  let nQuarti = 0;
+
+  for (const r of righe) {
+    if (!r || r.length < 2) continue;
+    const c0 = r[0];
+
+    // riga metadati: POD
+    if (typeof c0 === 'string' && /metering point/i.test(c0)) {
+      const m = String(r[2] || r[1] || '').match(/IT\d{3}E\d{8,10}/);
+      if (m) pod = m[0];
+      continue;
+    }
+
+    // riga dati: timestamp ISO (stringa) o Date
+    let dStr = null, ora = null;
+    if (typeof c0 === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}/.test(c0)) {
+      dStr = c0.slice(0, 10);              // la stringa è già in ora locale italiana (+01/+02)
+      ora = parseInt(c0.slice(11, 13));
+    } else if (c0 instanceof Date && !isNaN(c0)) {
+      dStr = fmtDateForPicker(c0);
+      ora = c0.getHours();
+    } else {
+      continue;
+    }
+
+    const kw = typeof r[1] === 'number' ? r[1] : numFlex(r[1]);
+    if (kw === null) continue;
+    const kwh = kw * 0.25;
+    const p = dStr.split('-');
+    const f = fasciaOraria(new Date(parseInt(p[0]), parseInt(p[1]) - 1, parseInt(p[2])), ora);
+    if (!perGiorno[dStr]) perGiorno[dStr] = { data: dStr, f1: 0, f2: 0, f3: 0 };
+    perGiorno[dStr][f] += kwh;
+    nQuarti++;
+  }
+
+  const rows = Object.values(perGiorno)
+    .map(r => ({ data: r.data, f1: Math.round(r.f1), f2: Math.round(r.f2), f3: Math.round(r.f3) }))
+    .sort((a, b) => a.data.localeCompare(b.data));
+  if (!rows.length) throw new Error('Nessuna riga quartoraria riconosciuta nel foglio "' + sheetName + '"');
+  return { rows, pod, nQuarti, sheetName };
+}
+
+// ── DROPZONE DETTAGLIO CONSUMI ────────────────────────────────
+const dzc = document.getElementById('dropzone-consumi');
+const fileInputConsumi = document.getElementById('file-input-consumi');
+
+dzc.addEventListener('click', () => fileInputConsumi.click());
+fileInputConsumi.addEventListener('change', () => {
+  if (fileInputConsumi.files.length) handleConsumiFile(fileInputConsumi.files[0]);
+  fileInputConsumi.value = '';
+});
+['dragenter', 'dragover'].forEach(ev =>
+  dzc.addEventListener(ev, (e) => { e.preventDefault(); e.stopPropagation(); dzc.classList.add('dragover'); }));
+['dragleave', 'drop'].forEach(ev =>
+  dzc.addEventListener(ev, (e) => { e.preventDefault(); e.stopPropagation(); dzc.classList.remove('dragover'); }));
+dzc.addEventListener('drop', (e) => {
+  const f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) handleConsumiFile(f);
+});
+
+function dzcStatus(text, cls) {
+  const el = document.getElementById('dzc-status');
+  el.className = 'dz-status ' + cls;
+  el.textContent = text;
+  if (cls === 'ok') setTimeout(() => { el.className = 'dz-status'; }, 5000);
+}
+
+async function handleConsumiFile(file) {
+  dzcStatus(`⏳ Lettura di "${file.name}"…`, 'info');
+  try {
+    const buf = await file.arrayBuffer();
+
+    // Anti-doppione: stesso contenuto già in archivio → stop
+    pendingConsumiHash = await sha256File(buf.slice(0));
+    const dup = await docFindByHash(pendingConsumiHash);
+    if (dup) {
+      pendingConsumiFile = null;
+      dzcStatus('⚠️ ' + docDupMsg(dup) + ' Caricamento annullato.', 'err');
+      return;
+    }
+    pendingConsumiFile = file;   // verrà archiviato alla conferma nel modal
+
+    let rows, extra = '';
+    if (/\.xlsx?$/i.test(file.name) || /spreadsheet|ms-excel/.test(file.type)) {
+      const wb = XLSX.read(buf, { type: 'array', cellDates: false });
+      const ris = parseConsumiEngieXlsx(wb);
+      rows = ris.rows;
+      extra = ` Curva quartoraria (${fmt(ris.nQuarti, 0)} quarti d'ora${ris.pod ? ' · POD ' + ris.pod : ''}). Nota: è il PRELIEVO dalla rete — nelle ore solari il FV copre il resto.`;
+    } else if (/\.csv$/i.test(file.name) || file.type === 'text/csv') {
+      rows = parseConsumiCsv(new TextDecoder('utf-8').decode(buf));
+    } else if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
+      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      let text = '';
+      for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        text += content.items.map(it => it.str).join(' ') + '\n';
+      }
+      rows = parseConsumiPdfText(text);
+    } else {
+      throw new Error('Formato non supportato: usa XLSX, CSV o PDF');
+    }
+    dzcStatus(`✓ Riconosciuti ${rows.length} giorni. Verifica e importa.`, 'ok');
+    openConsumiModal(rows, `Da "${file.name}": ${rows.length} giorni riconosciuti.${extra}`);
+  } catch (err) {
+    console.error(err);
+    dzcStatus('Errore: ' + err.message, 'err');
+  }
+}
+
+// ── MODAL RIEPILOGO ───────────────────────────────────────────
+function openConsumiModal(rows, subText) {
+  pendingConsumi = rows;
+  document.getElementById('consumi-modal-sub').textContent = subText;
+  // mese proposto: il più frequente tra le righe
+  const conteggio = {};
+  rows.forEach(r => { const k = r.data.slice(0, 7); conteggio[k] = (conteggio[k] || 0) + 1; });
+  const meseTop = Object.entries(conteggio).sort((a, b) => b[1] - a[1])[0][0];
+  document.getElementById('mc-mese').value = meseTop;
+
+  const tf1 = rows.reduce((s, r) => s + r.f1, 0);
+  const tf2 = rows.reduce((s, r) => s + r.f2, 0);
+  const tf3 = rows.reduce((s, r) => s + r.f3, 0);
+  const tot = tf1 + tf2 + tf3;
+  document.getElementById('consumi-modal-summary').innerHTML =
+    `<strong>${rows.length} giorni</strong> · totale <strong>${fmt(tot, 0)} kWh</strong> (${fmt(tot / 1000, 1)} MWh)<br>` +
+    `F1: ${fmt(tf1, 0)} kWh (${fmt(tot > 0 ? tf1 / tot * 100 : 0, 0)}%) · ` +
+    `F2: ${fmt(tf2, 0)} kWh (${fmt(tot > 0 ? tf2 / tot * 100 : 0, 0)}%) · ` +
+    `F3: ${fmt(tf3, 0)} kWh (${fmt(tot > 0 ? tf3 / tot * 100 : 0, 0)}%)`;
+  document.getElementById('consumi-modal').classList.add('open');
+}
+function closeConsumiModal() {
+  pendingConsumi = null;
+  pendingConsumiFile = null;
+  pendingConsumiHash = null;
+  document.getElementById('consumi-modal').classList.remove('open');
+}
+document.getElementById('consumi-modal').addEventListener('click', (e) => {
+  if (e.target.id === 'consumi-modal') closeConsumiModal();
+});
+
+async function salvaConsumi() {
+  if (!pendingConsumi) return;
+  const mese = document.getElementById('mc-mese').value;
+  if (!mese) { alert('Indica il mese di riferimento.'); return; }
+  // tengo solo i giorni di quel mese
+  const rows = pendingConsumi.filter(r => r.data.startsWith(mese));
+  if (!rows.length) { alert('Nessun giorno del mese selezionato tra i dati riconosciuti.'); return; }
+
+  // Anti-doppione per mese: dettaglio già presente → conferma sostituzione
+  const meseLblC = new Date(mese + '-01').toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+  const docEsistenteC = await docFindByTipoMese('consumi', mese);
+  const consumiEsistenti = await fetchConsumiMese(mese);
+  if (consumiEsistenti.length || docEsistenteC) {
+    const da = docEsistenteC ? ` (documento "${docEsistenteC.nome}")` : '';
+    if (!confirm(`Esiste già un dettaglio consumi per ${meseLblC}${da}. Sostituirlo con questo?`)) return;
+    if (docEsistenteC) await docDeleteRecord(docEsistenteC);
+  }
+
+  // scrittura su Supabase: sostituisco il mese intero
+  try {
+    const p = mese.split('-');
+    const last = new Date(parseInt(p[0]), parseInt(p[1]), 0).getDate();
+    await supaWrite(
+      `engie_consumi_giorno?data=gte.${mese}-01&data=lte.${mese}-${String(last).padStart(2, '0')}`, 'DELETE');
+    await supaWrite('engie_consumi_giorno', 'POST',
+      rows.map(r => ({ data: r.data, kwh_f1: r.f1, kwh_f2: r.f2, kwh_f3: r.f3 })));
+    consumiCache[mese] = rows;
+  } catch (err) {
+    alert('Salvataggio consumi su Supabase non riuscito: ' + err.message +
+      '\nHai eseguito setup-supabase.sql? (tabella engie_consumi_giorno)');
+    return;
+  }
+
+  // il file originale (XLSX/CSV/PDF) resta nell'archivio documenti
+  if (pendingConsumiFile) {
+    await archiviaDocumento(pendingConsumiFile, 'consumi', mese, pendingConsumiHash);
+  }
+
+  closeConsumiModal();
+  dzcStatus(`✓ Dettaglio ${new Date(mese + '-01').toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })} importato (${rows.length} giorni).`, 'ok');
+
+  // se in archivio c'è la fattura di quel mese, la seleziono così il grafico si aggancia
+  const idx = fattureCache.findIndex(f => f.mese.slice(0, 7) === mese);
+  if (idx !== -1 && idx !== fatturaSelIdx) { selectFattura(idx); return; }
+  renderConsumi();
+}
+
+// ── GRAFICO CONSUMI GIORNALIERI PER FASCE ─────────────────────
+async function renderConsumi() {
+  const card = document.getElementById('consumi-card');
+  const b = fattureCache[fatturaSelIdx];
+  if (!b) { card.style.display = 'none'; return; }
+  const meseKey = String(b.mese).slice(0, 7);
+  const rows = await fetchConsumiMese(meseKey);
+  if (!rows.length) {
+    card.style.display = 'none';
+    return;
+  }
+  card.style.display = '';
+  const meseLabel = new Date(meseKey + '-01').toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+  document.getElementById('consumi-chart-title').textContent = `📉 Consumo giornaliero per fasce — ${meseLabel}`;
+
+  const labels = rows.map(r => new Date(r.data).getDate());
+  if (consumiChartInstance) consumiChartInstance.destroy();
+  const ctx = document.getElementById('consumiChart').getContext('2d');
+
+  consumiChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'F1', data: rows.map(r => r.f1), backgroundColor: '#f59f00', hidden: !fasceVisibili.f1, stack: 's' },
+        { label: 'F2', data: rows.map(r => r.f2), backgroundColor: '#4dabf7', hidden: !fasceVisibili.f2, stack: 's' },
+        { label: 'F3', data: rows.map(r => r.f3), backgroundColor: '#495057', hidden: !fasceVisibili.f3, stack: 's' }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true, position: 'bottom',
+          labels: { font: { family: 'Barlow', size: 11 }, padding: 12, boxWidth: 14, boxHeight: 10 },
+          // la legenda e la barra fasce nella card restano sincronizzate
+          onClick: (e, item) => toggleFascia(item.text.toLowerCase())
+        },
+        tooltip: {
+          backgroundColor: '#1a2035', titleColor: '#fff', bodyColor: '#fff',
+          padding: 10, borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1,
+          callbacks: {
+            title: (items) => {
+              const r = rows[items[0].dataIndex];
+              return new Date(r.data).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+            },
+            label: (c) => ` ${c.dataset.label}: ${fmt(c.parsed.y, 0)} kWh`,
+            footer: (items) => {
+              const r = rows[items[0].dataIndex];
+              return `Totale: ${fmt(r.f1 + r.f2 + r.f3, 0)} kWh`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          stacked: true,
+          grid: { display: false },
+          ticks: { color: '#adb5bd', font: { family: 'DM Mono', size: 10 } }
+        },
+        y: {
+          stacked: true,
+          grid: { color: 'rgba(15,31,53,0.04)' },
+          ticks: { color: '#adb5bd', font: { family: 'DM Mono', size: 10 }, callback: (v) => fmt(v, 0) }
+        }
+      }
+    }
+  });
+
+  // legenda testuale: solo le fasce visibili + confronto col dato in fattura
+  const visKeys = ['f1', 'f2', 'f3'].filter(k => fasceVisibili[k]);
+  const totVis = rows.reduce((s, r) => s + visKeys.reduce((s2, k) => s2 + r[k], 0), 0);
+  const totTutto = rows.reduce((s, r) => s + r.f1 + r.f2 + r.f3, 0);
+  let legendTxt = visKeys.length === 3
+    ? `Totale mese: ${fmt(totTutto / 1000, 1)} MWh`
+    : `${visKeys.map(k => k.toUpperCase()).join('+')}: ${fmt(totVis / 1000, 1)} MWh su ${fmt(totTutto / 1000, 1)} totali`;
+  if (b.kwh_totali) {
+    const scarto = (totTutto - b.kwh_totali) / b.kwh_totali * 100;
+    legendTxt += Math.abs(scarto) < 1.5
+      ? ' · ✓ quadra con la fattura'
+      : ` · ⚠️ scarto ${scarto > 0 ? '+' : ''}${fmt(scarto, 1)}% vs fattura`;
+  }
+  document.getElementById('consumi-legend').textContent = legendTxt;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ARCHIVIO DOCUMENTI — Supabase Storage + tabella di registro
+// Bucket privato `documenti-energia` + tabella `energia_documenti`
+// (id, tipo, mese, nome, size, mime, hash UNIQUE, storage_path,
+// caricato_il) — vedi setup-supabase.sql. L'hash UNIQUE rende
+// l'anti-doppione valido per tutti gli utenti del portale.
+// ═══════════════════════════════════════════════════════════════
+let pendingFatturaFile = null;   // file PDF in attesa di conferma nel modal fattura
+let pendingFatturaHash = null;
+let pendingConsumiFile = null;   // file in attesa di conferma nel modal consumi
+let pendingConsumiHash = null;
+let lastPdfText = null;          // testo estratto dall'ultimo PDF (per calibrare il parser)
+
+async function docAll() {
+  try {
+    return await supaGet('energia_documenti?order=mese.desc,caricato_il.desc');
+  } catch (err) {
+    console.warn('energia_documenti non disponibile (eseguire setup-supabase.sql?)', err);
+    return [];
+  }
+}
+async function docGetById(id) {
+  try {
+    const r = await supaGet(`energia_documenti?id=eq.${id}&limit=1`);
+    return (r && r[0]) || null;
+  } catch (err) { return null; }
+}
+// Elimina riga di registro + file su Storage
+async function docDeleteRecord(doc) {
+  try {
+    const token = await authToken();
+    await fetch(`${SUPABASE_URL}/storage/v1/object/${DOC_BUCKET}/${doc.storage_path}`, {
+      method: 'DELETE',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
+    });
+  } catch (err) { console.warn('Rimozione file storage fallita', err); }
+  await supaWrite(`energia_documenti?id=eq.${doc.id}`, 'DELETE');
+}
+
+function fmtBytes(n) {
+  if (!n && n !== 0) return '—';
+  if (n < 1024) return n + ' B';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(0) + ' KB';
+  return (n / 1048576).toFixed(1) + ' MB';
+}
+
+// ── CONTROLLO DOPPIONI ────────────────────────────────────────
+// 1) per CONTENUTO: SHA-256 del file → stesso file (anche rinominato) bloccato
+// 2) per TIPO+MESE: fattura/consumi già presenti per quel mese → conferma sostituzione
+async function sha256File(buf) {
+  if (!crypto || !crypto.subtle) return null;   // contesto non sicuro: salto il check per hash
+  const h = await crypto.subtle.digest('SHA-256', buf);
+  return [...new Uint8Array(h)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function docFindByHash(hash) {
+  if (!hash) return null;
+  try {
+    const r = await supaGet(`energia_documenti?hash=eq.${hash}&limit=1`);
+    return (r && r[0]) || null;
+  } catch (err) { return null; }
+}
+async function docFindByTipoMese(tipo, mese) {
+  try {
+    const r = await supaGet(`energia_documenti?tipo=eq.${tipo}&mese=eq.${mese}&limit=1`);
+    return (r && r[0]) || null;
+  } catch (err) { return null; }
+}
+function docDupMsg(dup) {
+  const quando = dup.caricato_il
+    ? new Date(dup.caricato_il).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    : '—';
+  return `File identico già in archivio: "${dup.nome}" (caricato il ${quando}).`;
+}
+
+// Salva un file caricato: upload su Storage + riga di registro
+async function archiviaDocumento(file, tipo, mese, hash = null) {
+  if (!file) return null;
+  try {
+    if (!hash) {
+      try { hash = await sha256File(await file.arrayBuffer()); } catch (e) { hash = null; }
+    }
+    const safe = file.name.replace(/[^\w.\-]+/g, '_');
+    const storage_path = `${tipo}/${mese}/${Date.now()}_${safe}`;
+    const token = await authToken();
+    const up = await fetch(`${SUPABASE_URL}/storage/v1/object/${DOC_BUCKET}/${storage_path}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': file.type || 'application/octet-stream',
+        'x-upsert': 'true'
+      },
+      body: file
+    });
+    if (!up.ok) throw new Error('upload Storage HTTP ' + up.status);
+    await supaWrite('energia_documenti', 'POST', [{
+      tipo, mese,
+      nome: file.name,
+      size: file.size,
+      mime: file.type || '',
+      hash,
+      storage_path
+    }]);
+    renderDocumenti();
+    return true;
+  } catch (err) {
+    console.error('Archiviazione documento fallita', err);
+    alert('Archiviazione documento non riuscita: ' + err.message +
+      '\nVerifica bucket "' + DOC_BUCKET + '" e tabella energia_documenti (setup-supabase.sql).');
+    return null;
+  }
+}
+
+async function scaricaDocumento(id) {
+  const doc = await docGetById(id);
+  if (!doc) return;
+  try {
+    const token = await authToken();
+    const r = await fetch(`${SUPABASE_URL}/storage/v1/object/${DOC_BUCKET}/${doc.storage_path}`, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = doc.nome;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  } catch (err) {
+    alert('Download non riuscito: ' + err.message);
+  }
+}
+
+// Elimina documento E i dati derivati (fattura o dettaglio consumi del mese)
+async function eliminaDocumento(id) {
+  const doc = await docGetById(id);
+  if (!doc) return;
+  const meseLbl = new Date(doc.mese + '-01').toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+  const cosa = doc.tipo === 'fattura'
+    ? `la fattura di ${meseLbl} dall'archivio`
+    : `il dettaglio consumi di ${meseLbl}`;
+  if (!confirm(`Eliminare "${doc.nome}" e ${cosa}?`)) return;
+
+  try {
+    await docDeleteRecord(doc);
+    if (doc.tipo === 'fattura') {
+      await supaWrite(`engie_fatture?mese=eq.${doc.mese}-01`, 'DELETE').catch(() => {});
+      fatturaSelIdx = 0;
+      renderFatture(await fetchFatture());
+    } else {
+      const p = doc.mese.split('-');
+      const last = new Date(parseInt(p[0]), parseInt(p[1]), 0).getDate();
+      await supaWrite(
+        `engie_consumi_giorno?data=gte.${doc.mese}-01&data=lte.${doc.mese}-${String(last).padStart(2, '0')}`,
+        'DELETE').catch(() => {});
+      consumiCache[doc.mese] = [];
+      renderConsumi();
+    }
+  } catch (err) {
+    alert('Eliminazione non riuscita: ' + err.message);
+  }
+  renderDocumenti();
+}
+
+async function renderDocumenti() {
+  const box = document.getElementById('documenti-box');
+  let docs = [];
+  try { docs = await docAll(); } catch (e) { console.error(e); }
+  if (!docs.length) {
+    box.innerHTML = '<div class="doc-empty">Nessun documento in archivio. I PDF delle fatture e i file dei consumi che carichi restano salvati qui.</div>';
+    return;
+  }
+  docs.sort((a, b) => (b.mese || '').localeCompare(a.mese || '') || (b.caricato_il || '').localeCompare(a.caricato_il || ''));
+
+  box.innerHTML = `
+    <div class="details-table">
+      <table>
+        <thead>
+          <tr><th>Tipo</th><th>Mese</th><th>File</th><th class="num">Dimensione</th><th>Caricato</th><th></th></tr>
+        </thead>
+        <tbody>
+          ${docs.map(d => {
+            const meseLbl = d.mese
+              ? new Date(d.mese + '-01').toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })
+              : '—';
+            const quando = d.caricato_il
+              ? new Date(d.caricato_il).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit' }) +
+                ' ' + new Date(d.caricato_il).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+              : '—';
+            const badge = d.tipo === 'fattura'
+              ? '<span class="doc-badge fattura">📄 Fattura</span>'
+              : '<span class="doc-badge consumi">📉 Consumi</span>';
+            return `
+              <tr>
+                <td>${badge}</td>
+                <td style="text-transform:capitalize">${meseLbl}</td>
+                <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${d.nome}">${d.nome}</td>
+                <td class="num">${fmtBytes(d.size)}</td>
+                <td style="font-family:'DM Mono',monospace;font-size:12px">${quando}</td>
+                <td style="text-align:right;white-space:nowrap">
+                  <button class="doc-action" onclick="scaricaDocumento(${d.id})">⬇ Scarica</button>
+                  <button class="doc-action danger" onclick="eliminaDocumento(${d.id})">🗑</button>
+                </td>
+              </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AMBIENTE
+// ═══════════════════════════════════════════════════════════════
+function renderEnv(prodRows) {
+  const last = prodRows.length ? prodRows[prodRows.length - 1] : null;
+  const lifetime_kWh = last ? (last.energia_totale_kwh || 0) : 0;
+  const co2_tons = lifetime_kWh * 0.997 / 1000;
+  const trees = Math.round(lifetime_kWh * 0.997 / 731);
+  document.getElementById('co2-value').textContent = fmt(co2_tons, 0);
+  document.getElementById('trees-value').textContent = fmt(trees, 0);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BOTTOM NAV MOBILE
+// ═══════════════════════════════════════════════════════════════
+document.querySelectorAll('.bn-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.bn-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.target).scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// FOOTER + REFRESH
+// ═══════════════════════════════════════════════════════════════
+const REFRESH_INTERVAL_MS = 30 * 60 * 1000;
+let lastUpdateTs = null;
+function updateFooter() {
+  lastUpdateTs = new Date();
+  renderFooter();
+}
+function renderFooter() {
+  if (!lastUpdateTs) return;
+  const next = new Date(lastUpdateTs.getTime() + REFRESH_INTERVAL_MS);
+  const diffMin = Math.max(0, Math.round((next - new Date()) / 60000));
+  document.getElementById('footer-info').textContent =
+    `Ultimo aggiornamento: ${lastUpdateTs.toLocaleTimeString('it-IT')} · auto-refresh tra ~${diffMin} min · ⟳ per aggiornare subito`;
+}
+
+let refreshing = false;
+async function refreshAllData() {
+  if (refreshing) return;
+  refreshing = true;
+  const btn = document.getElementById('refresh-btn');
+  btn.classList.add('spinning');
+  showSkeletons();
+
+  try {
+    if (rangeMode) {
+      // ── MODALITÀ PERIODO da–a ──
+      const [daily, giorni, mesi, fatture] = await Promise.all([
+        fetchRangeDaily(rangeStart, rangeEnd),
+        fetchBilancioGiorni(),
+        fetchBilancioMesi(),
+        fetchFatture()
+      ]);
+      bilancioCache.periodo = daily;
+      bilancioCache.giorni = giorni;
+      bilancioCache.mesi = mesi;
+
+      renderHeroRange(daily);
+      renderKpiRange(daily);
+      renderChartRange(daily);
+      renderPvsystMese(daily);      // sezione confronto PVSyst (solo modalità Mese)
+      renderBilancioCurrentTab();
+      renderFatture(fatture);
+      updateFooter();
+      return;
+    }
+
+    // ── MODALITÀ GIORNO ──
+    const ieri = new Date(selectedDate);
+    ieri.setDate(ieri.getDate() - 1);
+
+    const [prod, prodIeri, bilOrario, giorni, mesi, fatture] = await Promise.all([
+      fetchProduzione(selectedDate),
+      fetchProduzione(ieri),          // serve solo per il delta % sul KPI energia
+      fetchBilancioOrario(selectedDate),
+      fetchBilancioGiorni(),
+      fetchBilancioMesi(),
+      fetchFatture()
+    ]);
+
+    bilancioCache.oggi = bilOrario;
+    bilancioCache.giorni = giorni;
+    bilancioCache.mesi = mesi;
+
+    renderHero(prod, bilOrario || []);
+    renderKpi(prod, prodIeri, giorni);
+    renderChart(prod);
+    document.getElementById('sec-pvsyst').style.display = 'none';   // solo in modalità Mese
+    renderBilancioCurrentTab();
+    renderFatture(fatture);
+    renderEnv(prod);
+    updateFooter();
+  } catch (err) {
+    console.error(err);
+    document.getElementById('live-kpi').innerHTML =
+      `<div class="state-msg error">Errore: ${err.message}</div>`;
+  } finally {
+    refreshing = false;
+    btn.classList.remove('spinning');
+  }
+}
+document.getElementById('refresh-btn').addEventListener('click', refreshAllData);
+
+// ═══════════════════════════════════════════════════════════════
+// UI STATE HELPERS (auth)
+// ═══════════════════════════════════════════════════════════════
+function showScreen(id) {
+  ['login-screen', 'setpwd-screen', 'app-container'].forEach(s => {
+    document.getElementById(s).style.display = (s === id) ? '' : 'none';
+  });
+}
+function showMsg(msgId, text, type = 'info') {
+  const el = document.getElementById(msgId);
+  el.className = `auth-msg ${type}`;
+  el.textContent = text;
+}
+function clearMsg(msgId) {
+  const el = document.getElementById(msgId);
+  el.className = 'auth-msg';
+  el.textContent = '';
+}
+
+// Copre anche il caso di refresh token fallito in background
+supa.auth.onAuthStateChange((event) => {
+  if (event === 'SIGNED_OUT' && dashboardStarted) {
+    dashboardStarted = false;
+    showScreen('login-screen');
+    showMsg('login-msg', 'Sessione scaduta: accedi di nuovo per continuare.', 'info');
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// AVVIO DASHBOARD (utente autenticato)
+// ═══════════════════════════════════════════════════════════════
+let dashboardStarted = false;
+async function startDashboard(session) {
+  if (dashboardStarted) return;
+  dashboardStarted = true;
+
+  const email = session?.user?.email || '';
+  document.getElementById('user-badge').textContent = email;
+
+  showScreen('app-container');
+  syncDateUi();
+  await refreshAllData();
+  renderDocumenti();
+
+  setInterval(() => {
+    if (document.hidden) return;
+    if (rangeMode) return;                 // i dati di un periodo passato non cambiano
+    if (!isSelectedDateToday()) return;
+    refreshAllData();
+  }, REFRESH_INTERVAL_MS);
+  setInterval(renderFooter, 60 * 1000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && !rangeMode && isSelectedDateToday()) refreshAllData();
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HANDLER LOGIN
+// ═══════════════════════════════════════════════════════════════
+document.getElementById('login-btn').addEventListener('click', async () => {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  if (!email || !password) {
+    showMsg('login-msg', 'Inserisci email e password', 'error');
+    return;
+  }
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true;
+  btn.textContent = 'Accesso in corso…';
+  clearMsg('login-msg');
+
+  const { data, error } = await supa.auth.signInWithPassword({ email, password });
+
+  btn.disabled = false;
+  btn.textContent = 'Accedi';
+
+  if (error) {
+    showMsg('login-msg', error.message || 'Credenziali non valide', 'error');
+    return;
+  }
+  await startDashboard(data.session);
+});
+
+['login-email', 'login-password'].forEach(id => {
+  document.getElementById(id).addEventListener('keypress', e => {
+    if (e.key === 'Enter') document.getElementById('login-btn').click();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// HANDLER SET PASSWORD
+// ═══════════════════════════════════════════════════════════════
+document.getElementById('setpwd-btn').addEventListener('click', async () => {
+  const pwd = document.getElementById('setpwd-password').value;
+  const pwd2 = document.getElementById('setpwd-password2').value;
+  if (pwd.length < 8) {
+    showMsg('setpwd-msg', 'La password deve essere di almeno 8 caratteri', 'error');
+    return;
+  }
+  if (pwd !== pwd2) {
+    showMsg('setpwd-msg', 'Le due password non coincidono', 'error');
+    return;
+  }
+  const btn = document.getElementById('setpwd-btn');
+  btn.disabled = true;
+  btn.textContent = 'Salvataggio…';
+
+  const { error } = await supa.auth.updateUser({ password: pwd });
+
+  btn.disabled = false;
+  btn.textContent = 'Imposta password e accedi';
+
+  if (error) {
+    showMsg('setpwd-msg', error.message || 'Errore imposta password', 'error');
+    return;
+  }
+  showMsg('setpwd-msg', 'Password impostata! Accesso in corso…', 'success');
+
+  history.replaceState(null, '', window.location.pathname);
+  const { data: { session } } = await supa.auth.getSession();
+  setTimeout(() => startDashboard(session), 800);
+});
+
+// ═══════════════════════════════════════════════════════════════
+// HANDLER LOGOUT
+// ═══════════════════════════════════════════════════════════════
+document.getElementById('logout-btn').addEventListener('click', async () => {
+  await supa.auth.signOut();
+  window.location.reload();
+});
+
+// ═══════════════════════════════════════════════════════════════
+// ROUTING INIZIALE — decide cosa mostrare
+// ═══════════════════════════════════════════════════════════════
+(async () => {
+  const hash = window.location.hash || '';
+  const isInviteFlow = hash.includes('type=invite') || hash.includes('type=recovery');
+
+  // Supabase JS rileva i parametri in URL (detectSessionInUrl): attendo che processi
+  await new Promise(r => setTimeout(r, 200));
+
+  const { data: { session } } = await supa.auth.getSession();
+
+  if (isInviteFlow && session) {
+    showScreen('setpwd-screen');
+    return;
+  }
+  if (session) {
+    await startDashboard(session);
+    return;
+  }
+  showScreen('login-screen');
+})();
+</script>
+
+</body>
+</html>
