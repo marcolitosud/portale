@@ -5,16 +5,16 @@
    ══════════════════════════════════════════════════════════════ */
 /* ══════════════════════════════════════════════════════════════
    Effe Printing — client Supabase condiviso (con autenticazione)
-   Nessuna credenziale nel codice: l'utente fa login dal portale
-   (index.html) con le proprie credenziali Supabase; qui si conserva
-   solo la sessione (access/refresh token) nel localStorage del
-   dispositivo. Intercetta le fetch verso /rest/ e aggiunge il JWT.
+   Nessuna credenziale nel codice: il portale (index.html) invia nome
+   utente e password alla edge function "portale-login", che li verifica
+   lato server e restituisce una sessione. Qui si conserva solo la
+   sessione (access/refresh token) nel localStorage del dispositivo.
+   Intercetta le fetch verso /rest/ e aggiunge il JWT.
    ══════════════════════════════════════════════════════════════ */
 (function(){
   var URL_ = 'https://pkxeljiuqbtsyfgbdbfb.supabase.co';
   var KEY_ = 'sb_publishable_cE0yIitgfyw9WQ71YELk4A_e-15R5YD';
   var STORE = 'ep_sb_session';
-  var DOMAIN = '@effeprinting.local';
 
   var _authPromise = null;
   var originalFetch = window.fetch.bind(window);
@@ -22,12 +22,15 @@
   function load(){
     try{ return JSON.parse(localStorage.getItem(STORE)) || null; }catch(e){ return null; }
   }
-  function save(d){
+  function save(d, reparti){
+    var prev = load() || {};
+    var rep = (prev.reparti || []).slice();
+    (reparti || []).forEach(function(r){ if(rep.indexOf(r) < 0) rep.push(r); });
     var s = {
       access_token: d.access_token,
       refresh_token: d.refresh_token,
       expires_at: Date.now() + (d.expires_in - 60) * 1000,
-      user: d.user ? {id:d.user.id, email:d.user.email, app_metadata:d.user.app_metadata||{}} : (load()||{}).user
+      reparti: rep
     };
     localStorage.setItem(STORE, JSON.stringify(s));
     return s;
@@ -42,19 +45,18 @@
     if(here !== '' && here !== 'index.html') location.replace('index.html');
   }
 
-  function emailOf(user){
-    user = (user||'').trim().toLowerCase();
-    return user.indexOf('@') >= 0 ? user : user + DOMAIN;
-  }
-
-  async function signIn(user, pwd){
-    var r = await originalFetch(URL_ + '/auth/v1/token?grant_type=password', {
+  // Login: verifica lato server (edge function), restituisce null se errato.
+  // reparto vuoto/null = accetta qualsiasi utenza valida del portale.
+  async function signIn(user, pwd, reparto){
+    var r = await originalFetch(URL_ + '/functions/v1/portale-login', {
       method:'POST',
       headers:{'apikey':KEY_,'Content-Type':'application/json'},
-      body: JSON.stringify({email:emailOf(user), password:pwd})
+      body: JSON.stringify({username:user, password:pwd, reparto:reparto || null})
     });
+    if(r.status === 429) throw new Error('troppi_tentativi');
     if(!r.ok) return null;
-    return save(await r.json());
+    var d = await r.json();
+    return save(d, d.reparti);
   }
 
   async function doRefresh(){
@@ -97,10 +99,8 @@
   }
 
   function hasSession(){ var s = load(); return !!(s && s.refresh_token); }
-  function currentUser(){ var s = load(); return s ? s.user : null; }
   function canAccess(reparto){
-    var u = currentUser();
-    var rep = (u && u.app_metadata && u.app_metadata.reparti) || [];
+    var rep = (load() || {}).reparti || [];
     return rep.indexOf('*') >= 0 || rep.indexOf(reparto) >= 0;
   }
 
@@ -186,5 +186,5 @@
   window.SB_KEY = KEY_;
   window._sbH = _sbHLegacy;
   window.SB = {URL:URL_, KEY:KEY_, H:H, get:get, upsert:upsert, del:del, setDiff:setDiff,
-               signIn:signIn, signOut:signOut, hasSession:hasSession, currentUser:currentUser, canAccess:canAccess};
+               signIn:signIn, signOut:signOut, hasSession:hasSession, canAccess:canAccess};
 })();

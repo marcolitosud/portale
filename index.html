@@ -149,10 +149,11 @@ html,body{font-family:var(--sans);min-height:100vh;background:#0F172A;color:whit
 <script src="sb.js"></script>
 <script>
 // ═══ REPARTI ═══
-// Nessuna credenziale nel codice: il login avviene su Supabase Auth (vedi sb.js).
-// login:false = il reparto non ha un'utenza dedicata, basta essere entrati con
-// una qualsiasi utenza del portale. I permessi per reparto stanno in
-// app_metadata.reparti dell'utente Supabase (es. ["spedizione"] oppure ["*"]).
+// Nessuna credenziale nel codice: nome utente e password vengono verificati
+// lato server dalla edge function "portale-login" (hash nella tabella
+// portale_credenziali, non leggibile dal browser). Vedi sb.js.
+// login:false = il reparto non ha un'utenza dedicata, basta una qualsiasi
+// utenza valida del portale.
 var REPARTI={
   spedizione:     {nome:'Spedizione',                     file:'ddt.html',             login:true},
   progr_stampa:   {nome:'Programmazione',                 file:'programmazione.html',  login:false},
@@ -233,16 +234,14 @@ async function vai(){
 
   try{
     var ok=false;
-    var sess=await SB.signIn(u,p);
-    if(sess){
-      ok=autorizzato(seletto);
-      if(!ok){
-        // credenziali valide ma senza permesso su questo reparto
-        var errP=document.getElementById('pwd-err');
-        errP.textContent='Questa utenza non ha accesso a '+cfg.nome+'.';
-        errP.style.display='block';
-        return;
-      }
+    try{
+      var sess=await SB.signIn(u,p,cfg.login?seletto:null);
+      ok=!!sess&&autorizzato(seletto);
+    }catch(e){
+      var errT=document.getElementById('pwd-err');
+      errT.textContent=e.message==='troppi_tentativi'?'Troppi tentativi. Riprova tra qualche minuto.':'Errore di connessione. Riprova.';
+      errT.style.display='block';
+      return;
     }
 
     if(ok){
