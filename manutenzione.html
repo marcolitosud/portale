@@ -6,10 +6,10 @@
 (function(){
   try{
     var raw=localStorage.getItem('ep_sess3_manutenzione');
-    if(!raw){document.documentElement.style.display="none";window.location.replace("portale.html");return;}
+    if(!raw){document.documentElement.style.display="none";window.location.replace("index.html");return;}
     var s=JSON.parse(raw);
-    if(!s||!s.ts||(Date.now()-s.ts)>=90*24*60*60*1000){document.documentElement.style.display="none";window.location.replace("portale.html");return;}
-  }catch(e){document.documentElement.style.display="none";window.location.replace("portale.html");}
+    if(!s||!s.ts||(Date.now()-s.ts)>=90*24*60*60*1000){document.documentElement.style.display="none";window.location.replace("index.html");return;}
+  }catch(e){document.documentElement.style.display="none";window.location.replace("index.html");}
 })();
 </script>
 <meta charset="UTF-8"/>
@@ -566,10 +566,10 @@ p, li, td, th, label, .tick-nota, .prog-sub { font-size: 15px !important; color:
 (function(){
   try{
     var raw=localStorage.getItem('ep_sess3_manutenzione');
-    if(!raw){window.location.replace('portale.html');return;}
+    if(!raw){window.location.replace('index.html');return;}
     var sess=JSON.parse(raw);
-    if(Date.now()-sess.ts>=90*24*60*60*1000){window.location.replace('portale.html');return;}
-  }catch(e){window.location.replace('portale.html');return;}
+    if(Date.now()-sess.ts>=90*24*60*60*1000){window.location.replace('index.html');return;}
+  }catch(e){window.location.replace('index.html');return;}
 })();
 </script>
 <script>
@@ -762,7 +762,7 @@ function doLogout(){
   localStorage.removeItem('ep_sess3_manutenzione');
   // Non revoco automaticamente lo sblocco responsabile: vale 90 gg per dispositivo come richiesto
   G('app').classList.remove('on');G('login').style.display='flex';
-  setTimeout(function(){window.location.replace('portale.html');},150);
+  setTimeout(function(){window.location.replace('index.html');},150);
 }
 
 // ═══ SBLOCCO RESPONSABILE (90gg per dispositivo) ═══

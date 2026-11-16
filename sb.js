@@ -3,55 +3,113 @@
    Intercetta le fetch verso /rest/ e aggiunge il JWT automaticamente.
    Nessun file HTML va modificato.
    ══════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════
+   Effe Printing — client Supabase condiviso (con autenticazione)
+   Nessuna credenziale nel codice: il portale (index.html) invia nome
+   utente e password alla edge function "portale-login", che li verifica
+   lato server e restituisce una sessione. Qui si conserva solo la
+   sessione (access/refresh token) nel localStorage del dispositivo.
+   Intercetta le fetch verso /rest/ e aggiunge il JWT.
+   ══════════════════════════════════════════════════════════════ */
 (function(){
   var URL_ = 'https://pkxeljiuqbtsyfgbdbfb.supabase.co';
   var KEY_ = 'sb_publishable_cE0yIitgfyw9WQ71YELk4A_e-15R5YD';
+  var STORE = 'ep_sb_session';
 
-  // ═══ UTENTE CONDIVISO DEL PORTALE (creato in Authentication → Users) ═══
-  var AUTH_EMAIL = 'portale@effeprinting.local';
-  var AUTH_PWD   = 'PVrPduE..?56MQ)';
-
-  var _token = null, _refresh = null, _expiresAt = 0, _authPromise = null;
+  var _authPromise = null;
   var originalFetch = window.fetch.bind(window);
 
-  async function doSignIn(){
-    var r = await originalFetch(URL_ + '/auth/v1/token?grant_type=password', {
+  function load(){
+    try{ return JSON.parse(localStorage.getItem(STORE)) || null; }catch(e){ return null; }
+  }
+  function save(d, reparti){
+    var prev = load() || {};
+    var rep = (prev.reparti || []).slice();
+    (reparti || []).forEach(function(r){ if(rep.indexOf(r) < 0) rep.push(r); });
+    var s = {
+      access_token: d.access_token,
+      refresh_token: d.refresh_token,
+      expires_at: Date.now() + (d.expires_in - 60) * 1000,
+      reparti: rep
+    };
+    localStorage.setItem(STORE, JSON.stringify(s));
+    return s;
+  }
+  function clear(){
+    localStorage.removeItem(STORE);
+    // invalida anche le vecchie sessioni "di reparto" usate dalle guardie delle pagine
+    Object.keys(localStorage).forEach(function(k){ if(k.indexOf('ep_sess3_')===0) localStorage.removeItem(k); });
+  }
+  function toLogin(){
+    var here = location.pathname.split('/').pop();
+    if(here !== '' && here !== 'index.html') location.replace('index.html');
+  }
+
+  // Login: verifica lato server (edge function), restituisce null se errato.
+  // reparto vuoto/null = accetta qualsiasi utenza valida del portale.
+  async function signIn(user, pwd, reparto){
+    var r = await originalFetch(URL_ + '/functions/v1/portale-login', {
       method:'POST',
       headers:{'apikey':KEY_,'Content-Type':'application/json'},
-      body: JSON.stringify({email:AUTH_EMAIL, password:AUTH_PWD})
+      body: JSON.stringify({username:user, password:pwd, reparto:reparto || null})
     });
-    if(!r.ok) throw new Error('SB signIn failed: HTTP ' + r.status);
+    if(r.status === 429) throw new Error('troppi_tentativi');
+    if(!r.ok) return null;
     var d = await r.json();
-    _token = d.access_token; _refresh = d.refresh_token;
-    _expiresAt = Date.now() + (d.expires_in - 60) * 1000;
+    return save(d, d.reparti);
   }
 
   async function doRefresh(){
+    var cur = load();
+    if(!cur || !cur.refresh_token) throw new Error('nessuna sessione');
     var r = await originalFetch(URL_ + '/auth/v1/token?grant_type=refresh_token', {
       method:'POST',
       headers:{'apikey':KEY_,'Content-Type':'application/json'},
-      body: JSON.stringify({refresh_token:_refresh})
+      body: JSON.stringify({refresh_token:cur.refresh_token})
     });
-    if(!r.ok){ _refresh = null; return doSignIn(); }
-    var d = await r.json();
-    _token = d.access_token; _refresh = d.refresh_token;
-    _expiresAt = Date.now() + (d.expires_in - 60) * 1000;
+    if(!r.ok){
+      // un'altra scheda potrebbe aver già ruotato il token: ricontrolla
+      var again = load();
+      if(again && again.refresh_token !== cur.refresh_token && Date.now() < again.expires_at) return again;
+      throw new Error('refresh fallito: HTTP ' + r.status);
+    }
+    return save(await r.json());
   }
 
   async function ensureAuth(){
-    if(_token && Date.now() < _expiresAt) return;
+    var s = load();
+    if(s && s.access_token && Date.now() < s.expires_at) return s;
     if(_authPromise) return _authPromise;
-    _authPromise = (_refresh ? doRefresh() : doSignIn()).finally(function(){
-      _authPromise = null;
-    });
+    _authPromise = doRefresh().catch(function(e){
+      clear(); toLogin(); throw e;
+    }).finally(function(){ _authPromise = null; });
     return _authPromise;
+  }
+
+  async function signOut(){
+    var s = load();
+    if(s && s.access_token){
+      try{
+        await originalFetch(URL_ + '/auth/v1/logout', {
+          method:'POST', headers:{'apikey':KEY_,'Authorization':'Bearer ' + s.access_token}
+        });
+      }catch(e){}
+    }
+    clear();
+  }
+
+  function hasSession(){ var s = load(); return !!(s && s.refresh_token); }
+  function canAccess(reparto){
+    var rep = (load() || {}).reparti || [];
+    return rep.indexOf('*') >= 0 || rep.indexOf(reparto) >= 0;
   }
 
   // Intercetta tutte le fetch verso /rest/ e inietta il JWT
   window.fetch = async function(url, opts){
     var u = (typeof url === 'string') ? url : (url && url.url);
     if(u && u.indexOf(URL_ + '/rest/') === 0){
-      await ensureAuth();
+      var _s = await ensureAuth();
+      var _token = _s.access_token;
       opts = opts || {};
       opts.headers = opts.headers || {};
       if(opts.headers instanceof Headers){
@@ -66,7 +124,7 @@
   };
 
   async function H(){
-    await ensureAuth();
+    var _token = (await ensureAuth()).access_token;
     return {
       'apikey': KEY_,
       'Authorization': 'Bearer ' + _token,
@@ -118,7 +176,7 @@
   function _sbHLegacy(){
     return {
       'apikey': KEY_,
-      'Authorization': 'Bearer ' + (_token || KEY_),
+      'Authorization': 'Bearer ' + (((load()||{}).access_token) || KEY_),
       'Content-Type': 'application/json'
     };
   }
@@ -127,5 +185,6 @@
   window.SB_URL = URL_;
   window.SB_KEY = KEY_;
   window._sbH = _sbHLegacy;
-  window.SB = {URL:URL_, KEY:KEY_, H:H, get:get, upsert:upsert, del:del, setDiff:setDiff};
+  window.SB = {URL:URL_, KEY:KEY_, H:H, get:get, upsert:upsert, del:del, setDiff:setDiff,
+               signIn:signIn, signOut:signOut, hasSession:hasSession, canAccess:canAccess};
 })();

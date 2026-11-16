@@ -7,10 +7,10 @@
 (function(){
   try{
     var raw=localStorage.getItem('ep_sess3_produzione');
-    if(!raw){document.documentElement.style.display="none";window.location.replace("portale.html");return;}
+    if(!raw){document.documentElement.style.display="none";window.location.replace("index.html");return;}
     var s=JSON.parse(raw);
-    if(!s||!s.ts||(Date.now()-s.ts)>=90*24*60*60*1000){document.documentElement.style.display="none";window.location.replace("portale.html");return;}
-  }catch(e){document.documentElement.style.display="none";window.location.replace("portale.html");}
+    if(!s||!s.ts||(Date.now()-s.ts)>=90*24*60*60*1000){document.documentElement.style.display="none";window.location.replace("index.html");return;}
+  }catch(e){document.documentElement.style.display="none";window.location.replace("index.html");}
 })();
 </script>
 <meta charset="UTF-8"/>
@@ -1332,11 +1332,11 @@ aside.sidebar { background: #FFFFFF !important; border-right: 1px solid #DDE1E9 
 (function(){
   try{
     var raw=localStorage.getItem('ep_sess3_produzione');
-    if(!raw){window.location.replace('portale.html');return;}
+    if(!raw){window.location.replace('index.html');return;}
     var sess=JSON.parse(raw);
     var oreMax=90*24*60*60*1000;
-    if(Date.now()-sess.ts>=oreMax){window.location.replace('portale.html');return;}
-  }catch(e){window.location.replace('portale.html');return;}
+    if(Date.now()-sess.ts>=oreMax){window.location.replace('index.html');return;}
+  }catch(e){window.location.replace('index.html');return;}
 })();
 
 // ═══ CONFIG ═══ (SB_URL e SB_KEY forniti da sb.js)
@@ -3327,7 +3327,7 @@ function parseTesseractV7(testo){
   var b=new Blob([JSON.stringify(m)],{type:'application/json'});
   document.getElementById('pwa-manifest').href=URL.createObjectURL(b);
   if('serviceWorker' in navigator){
-    // SW allineato a portale.html: network-first con timeout 3s + cache runtime.
+    // SW allineato a index.html: network-first con timeout 3s + cache runtime.
     // Prima versione: solo `caches.match(request)` senza MAI popolare la cache
     // → cache sempre vuota → fallback sempre undefined. In pratica un no-op.
     // Nota: blob URL non è supportato in Safari/iOS, quindi su iPad il SW non si

@@ -7,10 +7,10 @@
 (function(){
   try{
     var raw=localStorage.getItem('ep_sess3_programmazione');
-    if(!raw){document.documentElement.style.display="none";window.location.replace("portale.html");return;}
+    if(!raw){document.documentElement.style.display="none";window.location.replace("index.html");return;}
     var s=JSON.parse(raw);
-    if(!s||!s.ts||(Date.now()-s.ts)>=90*24*60*60*1000){document.documentElement.style.display="none";window.location.replace("portale.html");return;}
-  }catch(e){document.documentElement.style.display="none";window.location.replace("portale.html");}
+    if(!s||!s.ts||(Date.now()-s.ts)>=90*24*60*60*1000){document.documentElement.style.display="none";window.location.replace("index.html");return;}
+  }catch(e){document.documentElement.style.display="none";window.location.replace("index.html");}
 })();
 </script>
 <meta charset="UTF-8"/>
@@ -690,11 +690,11 @@ aside.sidebar { background: #FFFFFF !important; border-right: 1px solid #DDE1E9 
 (function(){
   try{
     var raw=localStorage.getItem('ep_sess3_programmazione');
-    if(!raw){window.location.replace('portale.html');return;}
+    if(!raw){window.location.replace('index.html');return;}
     var sess=JSON.parse(raw);
     var oreMax=90*24*60*60*1000; // 90 giorni
-    if(Date.now()-sess.ts>=oreMax){window.location.replace('portale.html');return;}
-  }catch(e){window.location.replace('portale.html');return;}
+    if(Date.now()-sess.ts>=oreMax){window.location.replace('index.html');return;}
+  }catch(e){window.location.replace('index.html');return;}
 })();
 
 // ═══════ COSTANTI ═══════
@@ -882,7 +882,7 @@ async function dbSet(key, arr) {
 }
 
 // ═══════ AUTH ═══════
-function doLogout() { window.location.href = 'portale.html'; }
+function doLogout() { window.location.href = 'index.html'; }
 function avvia() {
   // Svuota localStorage vecchio (dati in snake_case da JSONBin/prima migrazione)
   // così al prossimo accesso i dati vengono riletti freschi da Supabase in camelCase
