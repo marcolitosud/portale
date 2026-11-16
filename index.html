@@ -146,50 +146,36 @@ html,body{font-family:var(--sans);min-height:100vh;background:#0F172A;color:whit
 
 <div class="footer">© Effe Printing S.r.l. — uso interno</div>
 
+<script src="sb.js"></script>
 <script>
-// ═══ CREDENZIALI (PBKDF2-SHA256, 250.000 iterazioni, salt per campo) ═══
-var PBKDF2_ITER=250000;
-var MASTER={
-  us:'f5fb839d1c2c57b404435e36e8f5d7d2',
-  uh:'1fa785e6421063dc288fdcd8accd20823edf5292c62bfe0a7b3706ea81d96f61',
-  ps:'7a6d7f8d9064d194c46067127b41fb04',
-  ph:'6a5dd86ffeb63a0531da5df93396685e77cf12beca9b8e5f4277d6c9d953d1b3'
-};
+// ═══ REPARTI ═══
+// Nessuna credenziale nel codice: il login avviene su Supabase Auth (vedi sb.js).
+// login:false = il reparto non ha un'utenza dedicata, basta essere entrati con
+// una qualsiasi utenza del portale. I permessi per reparto stanno in
+// app_metadata.reparti dell'utente Supabase (es. ["spedizione"] oppure ["*"]).
 var REPARTI={
-  spedizione:     {nome:'Spedizione',      file:'ddt.html',
-    us:'76bc73ada95ad9cbaa6fa791373a005b', uh:'8259b60d8a933df2142da1392349ab3f0275ed2696d6b749b6a60543956a8639',
-    ps:'416eb905b8258f897244fc921d61dccc', ph:'bfaebc34cd5e10f7d12b93611b9be74b049749b594722df137b917b82148f2c3'},
-  progr_stampa:   {nome:'Programmazione',  file:'programmazione.html', us:'', uh:'', ps:'', ph:''},
-  programmazione: {nome:'Cartellini tecnici · Etichette', file:'cartellino.html',
-    us:'858d7782c405463c4a12f99f17b70389', uh:'ef12b8d98f8145b893cb0edec752bf44834d396b15431c80ded0d407770edfa2',
-    ps:'cceb4793144382a27222398a323a8e72', ph:'a41c7ded767d25edecd226092fa49314269b9958f89d4683e04bade682ce4a64'},
-  produzione:     {nome:'Produzione',      file:'produzione.html',
-    us:'05ef8ad915194ccc6ebcb454d43a25d0', uh:'021df54e9f9aa429ef6f6ae104d6aa12ed0bee5aeb8e70ebcacd04047835e1b6',
-    ps:'ebcd3db945d5c59f1e9268f53dafb539', ph:'84238674869d84714a19eba0e49f9a9dbef6ea0f974fc414dc077e968279cc02'},
-  turni:          {nome:'Turni',           file:'turni.html',
-    us:'23bbaa0bf33b22835bbf61a8fbcb800c', uh:'6b2d7004b702365a876ee2ad6e92157f6ed6ca0dcb3a4ffe48deb52a8ae74091',
-    ps:'65a0f5cb728ad641b361defd508f8dba', ph:'0d0f5e3cedcbfa20f8f77fe2c81f62378ed0b855cbca43f681ca90ae0982c1e6'},
-  manutenzione:   {nome:'Manutenzione',    file:'manutenzione.html',
-    us:'158d99bd88ef9ca31501c347eef81670', uh:'5130b7dfae80eed28e8ca1eab0ea78e6b1aecf02c7d2689f9879e68c886fc54f',
-    ps:'56f7c28d5aa243175533f1551ee9b004', ph:'723417262985d6b0e31e8a76f579e02ddbbe1ca548acd1cf66d2d611dd75abc4',
-    // secondo account consentito (manutentore)
-    altUs:'80f6452997ee159f9444b4725f35caab', altUh:'de602b48855c011ef981c00a5dc89a645be5946d51dd390f90d36870f76c9a45',
-    altPs:'beffc9b4fa960da36c62098f048cd6d6', altPh:'354c0354e159b69d9f2d6b888f6f915e140656e484c5a1079791891868cce0de'},
-  allestimento:   {nome:'Allestimento',    file:'allestimento.html',
-    us:'cca49fed68d4228d847029d8d3734149', uh:'82ed79cf436c6a39ebcc5b9905e0c01c3f86c0749c545eb3f9d4a0b151f8a41c',
-    ps:'7d374d60914219cce0656b01e26ca480', ph:'a46b387296476fa4d196fae8161207b4be058410ad0760f5158350bf87cd7fc9'},
-  preset:         {nome:'Preset Macchina', file:'preset_macchina.html', us:'', uh:'', ps:'', ph:''},
-  magazzino:      {nome:'Magazzino',       file:'magazzino_v2.html',    us:'', uh:'', ps:'', ph:''},
-  energia:        {nome:'Energia',         file:'energia.html',         us:'', uh:'', ps:'', ph:''}
+  spedizione:     {nome:'Spedizione',                     file:'ddt.html',             login:true},
+  progr_stampa:   {nome:'Programmazione',                 file:'programmazione.html',  login:false},
+  programmazione: {nome:'Cartellini tecnici · Etichette', file:'cartellino.html',      login:true},
+  produzione:     {nome:'Produzione',                     file:'produzione.html',      login:true},
+  turni:          {nome:'Turni',                          file:'turni.html',           login:true},
+  manutenzione:   {nome:'Manutenzione',                   file:'manutenzione.html',    login:true},
+  allestimento:   {nome:'Allestimento',                   file:'allestimento.html',    login:true},
+  preset:         {nome:'Preset Macchina',                file:'preset_macchina.html', login:false},
+  energia:        {nome:'Energia',                        file:'energia.html',         login:false}
 };
+function autorizzato(id){
+  if(!SB.hasSession())return false;
+  return REPARTI[id].login ? SB.canAccess(id) : true;
+}
 
 var seletto=null;
 
 function selRep(el,id){
   // Se sessione valida, vai diretto
-  if(hasSessione(id)){
-    var cfg=REPARTI[id];
-    window.location.href=cfg.file;
+  if(autorizzato(id)){
+    salvaSessione(id);
+    window.location.href=REPARTI[id].file;
     return;
   }
   document.querySelectorAll('.rep').forEach(function(r){r.classList.remove('sel');});
@@ -200,34 +186,15 @@ function selRep(el,id){
   document.getElementById('pwd-rep-name').textContent=cfg.nome;
   document.getElementById('pwd-inp').value='';
   document.getElementById('pwd-err').style.display='none';
-  // Se non c'è password vai diretto (salva comunque sessione per auth lato file reparto)
-  if(!cfg.ph&&!cfg.uh){panel.classList.remove('on');salvaSessione(id);window.location.href=cfg.file;return;}
   panel.classList.add('on');
   setTimeout(function(){document.getElementById('pwd-inp').focus();},100);
   panel.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
-async function pbkdf2(str,saltHex){
-  var salt=new Uint8Array(saltHex.match(/.{2}/g).map(function(h){return parseInt(h,16);}));
-  var key=await crypto.subtle.importKey('raw',new TextEncoder().encode(str),{name:'PBKDF2'},false,['deriveBits']);
-  var bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt:salt,iterations:PBKDF2_ITER,hash:'SHA-256'},key,256);
-  return Array.from(new Uint8Array(bits)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
-}
 function salvaSessione(id){
   var sess={id:id,ts:Date.now()};
   localStorage.setItem('ep_sess3_'+id,JSON.stringify(sess));
 }
-function hasSessione(id){
-  try{
-    var raw=localStorage.getItem('ep_sess3_'+id);
-    if(!raw)return false;
-    var sess=JSON.parse(raw);
-    var oreMax=90*24*60*60*1000; // 90 giorni
-    return (Date.now()-sess.ts)<oreMax;
-  }catch{return false;}
-}
-function rimuoviSessione(id){localStorage.removeItem('ep_sess3_'+id);}
-
 // Rate limit: dopo 5 tentativi falliti blocca per 60 secondi
 function tentativiKo(){
   try{var raw=localStorage.getItem('ep_ko');if(!raw)return{n:0,ts:0};return JSON.parse(raw);}catch{return{n:0,ts:0};}
@@ -252,8 +219,6 @@ async function vai(){
   var cfg=REPARTI[seletto];
   var u=document.getElementById('pwd-user').value.trim();
   var p=document.getElementById('pwd-inp').value;
-  if(!cfg.ph&&!cfg.uh){salvaSessione(seletto);window.location.href=cfg.file;return;}
-
   var sec=isBloccato();
   if(sec>0){
     var errB=document.getElementById('pwd-err');
@@ -267,20 +232,16 @@ async function vai(){
   if(btn){btn.disabled=true;btn.textContent='Verifica…';}
 
   try{
-    // MASTER
-    var mUh=await pbkdf2(u,MASTER.us);
-    var mPh=await pbkdf2(p,MASTER.ps);
-    var isMaster=(mUh===MASTER.uh&&mPh===MASTER.ph);
-
-    var ok=isMaster;
-    if(!ok){
-      var uh=await pbkdf2(u,cfg.us);
-      var ph=await pbkdf2(p,cfg.ps);
-      ok=(uh===cfg.uh&&ph===cfg.ph);
-      if(!ok&&cfg.altUh){
-        var uh2=await pbkdf2(u,cfg.altUs);
-        var ph2=await pbkdf2(p,cfg.altPs);
-        ok=(uh2===cfg.altUh&&ph2===cfg.altPh);
+    var ok=false;
+    var sess=await SB.signIn(u,p);
+    if(sess){
+      ok=autorizzato(seletto);
+      if(!ok){
+        // credenziali valide ma senza permesso su questo reparto
+        var errP=document.getElementById('pwd-err');
+        errP.textContent='Questa utenza non ha accesso a '+cfg.nome+'.';
+        errP.style.display='block';
+        return;
       }
     }
 
@@ -310,7 +271,7 @@ async function vai(){
     name:'Effe Printing — Portale',
     short_name:'EP Portale',
     description:'Portale interno Effe Printing S.r.l.',
-    start_url:'portale.html',
+    start_url:'index.html',
     display:'standalone',
     background_color:'#0F172A',
     theme_color:'#0F172A',

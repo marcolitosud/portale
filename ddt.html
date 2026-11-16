@@ -7,10 +7,10 @@
 (function(){
   try{
     var raw=localStorage.getItem('ep_sess3_spedizione');
-    if(!raw){document.documentElement.style.display="none";window.location.replace("portale.html");return;}
+    if(!raw){document.documentElement.style.display="none";window.location.replace("index.html");return;}
     var s=JSON.parse(raw);
-    if(!s||!s.ts||(Date.now()-s.ts)>=90*24*60*60*1000){document.documentElement.style.display="none";window.location.replace("portale.html");return;}
-  }catch(e){document.documentElement.style.display="none";window.location.replace("portale.html");}
+    if(!s||!s.ts||(Date.now()-s.ts)>=90*24*60*60*1000){document.documentElement.style.display="none";window.location.replace("index.html");return;}
+  }catch(e){document.documentElement.style.display="none";window.location.replace("index.html");}
 })();
 </script>
 <meta charset="UTF-8"/>
@@ -1162,11 +1162,11 @@ html, body {
 (function(){
   try{
     const raw = localStorage.getItem('ep_sess3_spedizione');
-    if(!raw){ window.location.replace('portale.html'); return; }
+    if(!raw){ window.location.replace('index.html'); return; }
     const sess = JSON.parse(raw);
     const oreMax = 90*24*60*60*1000;
-    if(Date.now() - sess.ts >= oreMax){ window.location.replace('portale.html'); return; }
-  }catch(e){ window.location.replace('portale.html'); return; }
+    if(Date.now() - sess.ts >= oreMax){ window.location.replace('index.html'); return; }
+  }catch(e){ window.location.replace('index.html'); return; }
 })();
 
 // ══════════════════════════════════════════

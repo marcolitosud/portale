@@ -976,11 +976,11 @@ body {
 (function(){
   try{
     var raw=localStorage.getItem('ep_sess3_preset');
-    if(!raw){window.location.replace('portale.html');return;}
+    if(!raw){window.location.replace('index.html');return;}
     var sess=JSON.parse(raw);
     var oreMax=90*24*60*60*1000;
-    if(Date.now()-sess.ts>=oreMax){window.location.replace('portale.html');return;}
-  }catch(e){window.location.replace('portale.html');return;}
+    if(Date.now()-sess.ts>=oreMax){window.location.replace('index.html');return;}
+  }catch(e){window.location.replace('index.html');return;}
 })();
 
 var piegaSelezionata = null;
