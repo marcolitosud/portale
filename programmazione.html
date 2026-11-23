@@ -478,6 +478,13 @@ const S = {
   lastSyncTs:  0,
   syncInProgress: false,
   syncErrorCount: 0,
+  // Guardia anti-race refreshLive: ogni scrittura su DB incrementa writeGen
+  // e tiene writesInFlight > 0 finché è in corso. refreshLive scarta i dati
+  // letti se nel frattempo c'è stata (o c'è) una scrittura locale, altrimenti
+  // sovrascriverebbe S.pianificazioni con uno snapshot vecchio e le segnature
+  // appena pianificate ricomparirebbero nel basket (→ doppio drag → doppioni).
+  writeGen: 0,
+  writesInFlight: 0,
 };
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -756,27 +763,37 @@ async function sbGet(path){
   if(!r.ok) throw new Error('GET '+path+' — HTTP '+r.status+' '+(await r.text()));
   return r.json();
 }
+async function _trackWrite(fn){
+  S.writesInFlight++; S.writeGen++;
+  try{ return await fn(); }
+  finally{ S.writesInFlight--; S.writeGen++; }
+}
 async function sbInsert(table, row){
-  const r = await _sbRetry('INSERT '+table, ()=>_fetchTimeout(SB.URL + '/rest/v1/' + table, {
-    method: 'POST',
-    headers: hdrs({'Prefer':'return=representation'}),
-    body: JSON.stringify([row])
-  }));
-  const rows = await r.json();
-  return rows[0];
+  // INSERT NON viene ritentato: se la richiesta va in timeout ma il server
+  // l'ha già eseguita, un secondo tentativo creerebbe una riga duplicata.
+  return _trackWrite(async () => {
+    const r = await _fetchTimeout(SB.URL + '/rest/v1/' + table, {
+      method: 'POST',
+      headers: hdrs({'Prefer':'return=representation'}),
+      body: JSON.stringify([row])
+    });
+    if(!r.ok) throw new Error('INSERT '+table+' — HTTP '+r.status+' '+(await r.text().catch(()=>'')));
+    const rows = await r.json();
+    return rows[0];
+  });
 }
 async function sbUpdate(table, idVal, patch){
-  await _sbRetry('UPDATE '+table, ()=>_fetchTimeout(SB.URL + '/rest/v1/' + table + '?id=eq.' + idVal, {
+  await _trackWrite(() => _sbRetry('UPDATE '+table, ()=>_fetchTimeout(SB.URL + '/rest/v1/' + table + '?id=eq.' + idVal, {
     method: 'PATCH',
     headers: hdrs({'Prefer':'return=minimal'}),
     body: JSON.stringify(patch)
-  }));
+  })));
 }
 async function sbDelete(table, idVal){
-  await _sbRetry('DELETE '+table, ()=>_fetchTimeout(SB.URL + '/rest/v1/' + table + '?id=eq.' + idVal, {
+  await _trackWrite(() => _sbRetry('DELETE '+table, ()=>_fetchTimeout(SB.URL + '/rest/v1/' + table + '?id=eq.' + idVal, {
     method: 'DELETE',
     headers: hdrs()
-  }));
+  })));
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -845,6 +862,8 @@ async function loadAll(){
 // NON esegue sync DB (quella ha il suo timer separato a SYNC_DB_MS).
 async function refreshLive(){
   if(document.hidden) return;
+  if(S.writesInFlight > 0 || S.syncInProgress) return;
+  const genAtStart = S.writeGen;
   try{
     const tchFromYMD = toYMD(new Date(S.weekStart.getTime() - 7*86400000));
     const tchToYMD   = toYMD(new Date(S.weekStart.getTime() + 14*86400000));
@@ -854,6 +873,10 @@ async function refreshLive(){
       sbGet('progr_turni_chiusi?select=*&giorno=gte.' + tchFromYMD + '&giorno=lt.' + tchToYMD),
       sbGet('prod_reports?select=commessa_id,segn_id,target,copie,fermi_sec,avv_sec,stampa_tot_sec,esito,data,ora&order=id.desc&limit=3000')
     ]);
+    if(S.writesInFlight > 0 || S.writeGen !== genAtStart || S.syncInProgress){
+      console.log('[refreshLive] scritture locali durante la lettura: scarto lo snapshot');
+      return;
+    }
     S.pianificazioni = pians || [];
     S.prodActive = {kba1:null, kba2:null};
     (acts||[]).forEach(r => { S.prodActive[r.id] = r.data; });
@@ -1387,6 +1410,16 @@ function buildBasket(){
         p.prod_stato !== 'annullato'
       );
       if(haAttiva) continue;
+      // Esiste una pianif viva ma senza lane (fluttuante/ripresa)? Allora la
+      // segnatura è già rappresentata dalla card della sezione 2: non la
+      // duplico, altrimenti trascinandole entrambe si creano doppioni.
+      const haViva = S.pianificazioni.some(p =>
+        p.cartellino_id == ct.id &&
+        p.segnatura_idx == idx &&
+        p.prod_stato !== 'completato' &&
+        p.prod_stato !== 'annullato'
+      );
+      if(haViva) continue;
       // Esiste pianif marcata 'completato' o 'annullato' per questa segnatura?
       const haGestita = S.pianificazioni.some(p =>
         p.cartellino_id == ct.id &&
@@ -2219,6 +2252,35 @@ async function dropBasketSeg(d, tkKind, tkLane, hour){
   if(!ct) return;
   const t = defaultTimes(tkKind, hour);
   if(t.shifted) toast('Spostato fuori dal turno chiuso');
+  // Anti-doppione: controllo sul DB (non sulla cache locale, che può essere
+  // vecchia o di un altro PC) se la segnatura ha già una pianificazione viva.
+  // Se c'è, la sposto invece di crearne una nuova.
+  try{
+    const esist = await sbGet('progr_cartellini?select=*'
+      + '&cartellino_id=eq.' + d.cartId
+      + '&segnatura_idx=eq.' + d.segIdx
+      + '&split_from_id=is.null'
+      + '&prod_stato=not.in.(completato,annullato)'
+      + '&order=id.asc');
+    if(esist && esist.length){
+      const ex = esist[0];
+      let p = S.pianificazioni.find(x => x.id == ex.id);
+      if(!p){ p = ex; S.pianificazioni.push(p); }
+      await updatePianif(p, {
+        af_start:  t.af_start,
+        inc_start: t.inc_start,
+        kba_start: t.kba_start,
+        kba_lane:  tkLane || 1
+      });
+      toast('Segnatura già pianificata: spostata, non duplicata');
+      renderAll();
+      return;
+    }
+  }catch(e){
+    console.warn('[dropBasketSeg] verifica doppioni fallita:', e.message);
+    toast('Verifica fallita, riprova tra un attimo', true);
+    return;
+  }
   const row = await createPianif({
     cartellino_id: d.cartId,
     segnatura_idx: d.segIdx,
