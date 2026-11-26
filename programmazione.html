@@ -768,6 +768,23 @@ async function _trackWrite(fn){
   try{ return await fn(); }
   finally{ S.writesInFlight--; S.writeGen++; }
 }
+// Supabase/PostgREST restituisce al massimo 1000 righe per richiesta
+// (impostazione "Max rows" del progetto): oltre quella soglia le righe in
+// più vengono troncate SENZA errore. Questa funzione legge a pagine finché
+// non arriva una pagina incompleta. Il path deve contenere un order= stabile.
+const SB_PAGE = 1000;
+async function sbGetAll(path, maxRows){
+  const out = [];
+  for(let offset = 0; ; offset += SB_PAGE){
+    let lim = SB_PAGE;
+    if(maxRows != null) lim = Math.min(SB_PAGE, maxRows - out.length);
+    if(lim <= 0) break;
+    const page = await sbGet(path + '&limit=' + lim + '&offset=' + offset);
+    out.push(...(page || []));
+    if(!page || page.length < lim) break;
+  }
+  return out;
+}
 async function sbInsert(table, row){
   // INSERT NON viene ritentato: se la richiesta va in timeout ma il server
   // l'ha già eseguita, un secondo tentativo creerebbe una riga duplicata.
@@ -811,11 +828,11 @@ async function loadAll(){
     const tchFromYMD   = toYMD(new Date(S.weekStart.getTime() - 7*86400000));
     const tchToYMD     = toYMD(new Date(S.weekStart.getTime() + 14*86400000));
     const [cts, pians, acts, tch, rep] = await Promise.all([
-      sbGet('cartellini?select=*&order=id.desc'),
-      sbGet('progr_cartellini?select=*'),
+      sbGetAll('cartellini?select=*&order=id.desc'),
+      sbGetAll('progr_cartellini?select=*&order=id.asc'),
       sbGet('prod_active?select=*'),
       sbGet('progr_turni_chiusi?select=*&giorno=gte.' + tchFromYMD + '&giorno=lt.' + tchToYMD),
-      sbGet('prod_reports?select=commessa_id,segn_id,target,copie,fermi_sec,avv_sec,stampa_tot_sec,esito,data,ora&order=id.desc&limit=3000')
+      sbGetAll('prod_reports?select=commessa_id,segn_id,target,copie,fermi_sec,avv_sec,stampa_tot_sec,esito,data,ora&order=id.desc', 3000)
     ]);
     S.cartellini = (cts||[]).map(r => ({
       id: r.id, cliente: r.cliente, commessa: r.commessa, numCommessa: r.num_commessa,
@@ -868,10 +885,10 @@ async function refreshLive(){
     const tchFromYMD = toYMD(new Date(S.weekStart.getTime() - 7*86400000));
     const tchToYMD   = toYMD(new Date(S.weekStart.getTime() + 14*86400000));
     const [pians, acts, tch, rep] = await Promise.all([
-      sbGet('progr_cartellini?select=*'),
+      sbGetAll('progr_cartellini?select=*&order=id.asc'),
       sbGet('prod_active?select=*'),
       sbGet('progr_turni_chiusi?select=*&giorno=gte.' + tchFromYMD + '&giorno=lt.' + tchToYMD),
-      sbGet('prod_reports?select=commessa_id,segn_id,target,copie,fermi_sec,avv_sec,stampa_tot_sec,esito,data,ora&order=id.desc&limit=3000')
+      sbGetAll('prod_reports?select=commessa_id,segn_id,target,copie,fermi_sec,avv_sec,stampa_tot_sec,esito,data,ora&order=id.desc', 3000)
     ]);
     if(S.writesInFlight > 0 || S.writeGen !== genAtStart || S.syncInProgress){
       console.log('[refreshLive] scritture locali durante la lettura: scarto lo snapshot');
